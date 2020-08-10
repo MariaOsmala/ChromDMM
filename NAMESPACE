@@ -1,0 +1,22 @@
+useDynLib(DirichletMultinomial, .registration=TRUE)
+
+import(methods, Matrix, grid, ggplot2, plyr, reshape2, mgcv)
+importFrom(stats4, AIC, BIC, summary)
+importMethodsFrom(BiocGenerics, lapply, Map, sapply, width, start, end)
+importFrom(IRanges, IRangesList, resize, shift)
+importClassesFrom(S4Vectors, SimpleList, List, Vector, Annotated)
+importFrom(Rcpp, evalCpp)
+importFrom(parallel, mclapply, detectCores)
+importFrom(GGally, ggparcoord)
+importFrom(e1071, matchClasses)
+
+exportClasses(DMN, DMNGroup)
+export(dmn, dmngroup,
+       goodnessOfFit, laplace, mixturewt, mixture, heatmapdmn,
+       cvdmngroup, roc, csubset, shift.and.flip.signal,
+       ## S4 generics
+       fitted, predict, plot.clusters, bin_signal, extract_binned_signal,
+       plot.Dirichlet, soft_kmeans, plot.EM, plot.label.distribution,
+       plot.clustering.comparison)
+
+exportMethods(AIC, BIC, summary, show)
