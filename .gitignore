@@ -17,9 +17,9 @@
 RcppExports.*
 .Rproj.userls
 
-/data
+#/data
 help_kuinkaAsentaaDevtoolsTritonilleEiToimi.txt
 help_kuinkaAsentaaDevtoolsTyokoneelle.txt
 memo.R
 memo.txt
-*.RData
+#*.RData
