@@ -13,10 +13,10 @@ double sqdist(NumericVector ind1, NumericVector ind2) {
 }
 //nearest_center( mat(noncenters[j], _), mat, centers )
 double nearest_center(NumericVector x, NumericMatrix mat, IntegerVector ind) {
-  int rows = mat.nrow();
+  int rows = mat.nrow(); //this is not used?
   double out = 1e20;
 
-  for (int i = 0; i < ind.size(); ++i) {
+  for (int i = 0; i < ind.size(); ++i) {    //loop through all centers
     double tmp = sqdist(x, mat(ind[i], _)); //distance(Euclidean) between a sample and the center
     out = tmp < out ? tmp : out;
   }
@@ -24,7 +24,7 @@ double nearest_center(NumericVector x, NumericMatrix mat, IntegerVector ind) {
 }
 
 // [[Rcpp::export]]
-IntegerVector kmeanspp_initialize(NumericMatrix mat, int K) {
+IntegerVector kmeanspp_initialize(NumericMatrix mat, int K) { //mat is NxS matrix
   RNGScope scope;  	// ensure RNG gets set/reset
 
   IntegerVector noncenters = seq(0, mat.nrow()-1); // 0:999
@@ -43,7 +43,7 @@ IntegerVector kmeanspp_initialize(NumericMatrix mat, int K) {
       //compute the shortest distance from a data point to the closest center already chosen
       probs[j] = nearest_center(mat(noncenters[j], _), mat, centers);
     }
-    int newcenter = as<int>(sample(noncenters, 1, false, probs));
+    int newcenter = as<int>(sample(noncenters, 1, false, probs)); //replace is false
     centers.push_back(newcenter);
     noncenters = setdiff(noncenters, centers);
   }

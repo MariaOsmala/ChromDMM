@@ -1,7 +1,7 @@
 
 
 #' Optimize lambda
-#' lambda_{k}^{(m)} are the lambda parameters of length S for cluster k, chromatin feature
+#' lambda_{k}^{(m)} are the lambda parameters of length S for cluster k and chromatin feature m
 #'
 #' @param LambdaK lambda[[m]][k,] lambda_{} current lambda values
 #' @param data data=binned.data[[m]] N x S matrix
@@ -206,7 +206,7 @@ DMN.cluster <- function(count.data,
   #bin data and define shifting function
   #extract_binned_signal converts numerical matrix into an integer matrix
   #Does nothing?
-  binned.data <-extract_binned_signal(binned.data, seq_len(N))
+  binned.data <-extract_binned_signal(binned.data, seq_len(N)) #binned.data$H3K4me1: NxS matrix
   S <- sapply(binned.data, ncol)
 
   #row-wise normalization of all datatypes for soft-kmeans
@@ -227,7 +227,7 @@ DMN.cluster <- function(count.data,
   kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
   kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
   #rowNorm=F, the rows were already normalized
-  kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose,
+  kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose, #This is in dmn.cpp file
                             randomInit=randomInit, centers=kmeanspp.centers,
                             stiffness=soft.kmeans.stiffness, rowNorm=F)
   #list of 3
@@ -244,7 +244,7 @@ DMN.cluster <- function(count.data,
   alpha <- kmeans.res$centers #K x (M*S)
   stopifnot(!is.na(alpha), !is.infinite(alpha))
 
-  #split centers given by soft kmeans
+  #split centers given by soft kmeans, i.e. unconcatenate
   col.ends <- cumsum(S)
   col.starts <- col.ends - S + 1
   alpha <- mapply(function(s,e)alpha[,s:e,drop=F], col.starts, col.ends, SIMPLIFY = F) #List of M

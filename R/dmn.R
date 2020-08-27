@@ -89,8 +89,8 @@ dmn <-
         }
       }
       
-      ans <- DMN.cluster(count,
-                         k,
+      ans <- DMN.cluster(count.data=count,
+                         K=k,
                          bin.width=bin.width,
                          shift.ratio=shift.ratio,
                          seed=seed,
