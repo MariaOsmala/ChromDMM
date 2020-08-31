@@ -309,7 +309,7 @@ DMN.cluster <- function(count.data,
     if (verbose)
       cat('Calculating Ez values...\n')
 
-    #Computes the E-step
+    #Computes the E-step, the posterior probabilities of the cluster labels
     #The old Ez values not really used
     # returns K x N matrix Z
     #why offset subtracted?
@@ -392,7 +392,7 @@ DMN.cluster <- function(count.data,
                                            best.shift.and.flip.params$flip)
     } #end of shifting and flipping
 
-    weights <- rowSums(Ez) # \pi_k values Ez is K x N matrix SHOULD THESE BE NORMALIZED?
+    weights <- rowSums(Ez) # \pi_k values Ez is K x N matrix, are these normalized? Should this be rowMeans?
 
     if (verbose)
       cat('\nCalculating negative log likelihood...\n')
@@ -400,6 +400,9 @@ DMN.cluster <- function(count.data,
     #calculate neg. likelihood for convergence
     # Computes the marginal posterior given Z? p(X,Z|\theta)p+ p(\theta)
     # does not consider \pi
+    # weights 1xK (unnormalized, are normalized by this function/div by N)
+    #lambda list of K times S matrices
+    #binned.data N times S
     nll <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
     stopifnot(!is.na(nll), !is.infinite(nll))
 

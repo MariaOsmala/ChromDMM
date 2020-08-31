@@ -190,7 +190,7 @@ List soft_kmeans(NumericMatrix data,
 
     return List::create(_["centers"] = Mu,
                         _["weights"] = W,
-                        _["labels"] = Z);
+                        _["labels"] = Z); 
 }
 
 /*The function below computes the value of the lower bound to be optimized
@@ -206,7 +206,7 @@ List soft_kmeans(NumericMatrix data,
  ..$ : num 0.000227
  ..$ : num 0.592
  $ hkm_index: int 42
- *
+ * CHECKED, eta term converted to eta - 1
  */
 
 // [[Rcpp::export]]
@@ -244,22 +244,22 @@ double neg_log_evidence_lambda_pi(NumericVector lambda, List lparams)
         /* compute the logarithm of the Gamma function,
         dAlpha can not be zero or negative.
         Function computed using the real Lanczos method */
-        dLogEAlpha += gsl_sf_lngamma(dAlpha); // add to the sum
+        dLogEAlpha += gsl_sf_lngamma(dAlpha); // \sum_{j=1}^S \log \gamma (\alpha_{j} )
         dSumLambda += dLambda;
         dSumAlpha += dAlpha;
         const double lngammaAlpha0 = gsl_sf_lngamma(dAlpha); //lngamma of \alpha_{j}
         for (i = 0; i < N; i++) {
             const double dN = aanX(i, j); // x_{ij}
             const double dAlphaN = dAlpha + dN; // \alpha_{j}+x_{ij}
-            const double lngammaAlphaN = dN ? gsl_sf_lngamma(dAlphaN) : lngammaAlpha0;
+            const double lngammaAlphaN = dN ? gsl_sf_lngamma(dAlphaN) : lngammaAlpha0; //if dN exists or is non-zero, compute lnGamma(dAlphaN), else compute lnGamma(DaLpha)
             adSumAlphaN[i] += dAlphaN; // \sum_{j}^S \alpha_{j}+x_{ij} , weight by pi
-            dLogE -= adPi[i] * lngammaAlphaN; //weight by pi, E[z_i] * lng(x_{ij}+alpha_j)
+            dLogE -= adPi[i] * lngammaAlphaN; //weight by pi, -\sum_i E[z_i] *\sum_j lngamma(x_{ij}+alpha_j)
         }
     }
-    dLogEAlpha -= gsl_sf_lngamma(dSumAlpha);// \log \gamma ( \sum_{j=1}^S  \alpha_{j} )
+    dLogEAlpha -= gsl_sf_lngamma(dSumAlpha);// \sum_{j=1}^S \log \gamma (\alpha_{j} ) -\log \gamma ( \sum_{j=1}^S  \alpha_{j} )
 
     for(i = 0; i < N; i++)
-        dLogE += adPi[i] * gsl_sf_lngamma(adSumAlphaN[i]); // \sum_{n=1}^N E[z_i]* lng( \sum_j(x_ij+alpha-j) )
+        dLogE += adPi[i] * gsl_sf_lngamma(adSumAlphaN[i]); // \sum_{n=1}^N E[z_i]* lngamma( \sum_j(x_ij+alpha_j) )
 
     double reg_term;
 
@@ -267,20 +267,20 @@ double neg_log_evidence_lambda_pi(NumericVector lambda, List lparams)
       reg_term = 0.0;
     } else {
       double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
-      reg_term = GAMMA_NU_H*hk - GAMMA_ITA_H*log(hk); //nuh *hg-etah*log (hk), should it be (GAMMA_ITA_H-1)???
+      reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
     }
 
 
 
     //should it be (GAMMA_ITA-1)*dSumLambda???
     return dLogE + dWeight*dLogEAlpha + // complete data likelihood term
-      GAMMA_NU*dSumAlpha - GAMMA_ITA * dSumLambda + reg_term; //prior term
+      GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term; //prior term, ITA corrected to ITA-1 !!!
 }
 
 /* A function to return the gradient for the BFGS, derivative of the expected log posterior wrt lambda
  * lambda are the current values, lparams contains the current parameter values (E(z_i))
  * There might be again an error with GAMMA_ITA vs (GAMMA_ITA -1),
- * GAMMA_ITA_H seems to as expected
+ * GAMMA_ITA_H seems for the regularization seems to as expected
  */
 
 // [[Rcpp::export]]
@@ -307,7 +307,7 @@ NumericVector neg_log_derive_evidence_lambda_pi(NumericVector ptLambda,
     double dStore = 0.0; // sum of alpha over j
     double dWeight = 0; // sum of z_i over i/N
 
-    for (i = 0; i < N; i++) {
+    for (i = 0; i < N; i++) {  
         adStore[i] = 0.0;
         dWeight += adPi[i];
     }
@@ -350,19 +350,22 @@ NumericVector neg_log_derive_evidence_lambda_pi(NumericVector ptLambda,
           double gjk = REG_DERIV_LAMBDA_G(ptLambda, j); //deriv. of h_kj^(m) wrt \alpha_kj^(m)
           reg_term = GAMMA_NU_H*gjk - (GAMMA_ITA_H-1)*gjk/hk;
         }
+        //This is now corrected, GAMMA_ITA converted to GAMMA_ITA-1
         double value = adAlpha[j] *
-            (GAMMA_NU + adDeriv[j] - dStore + dSumStore + reg_term) - GAMMA_ITA; // should be (GAMMA_ITA -1)
+            (GAMMA_NU + adDeriv[j] - dStore + dSumStore + reg_term) - ( GAMMA_ITA -1 ); // should be (GAMMA_ITA -1)
 
         g[j] = value;
     }
   return g;
 }
-/* Computes the logarithm of p(x|\theta)(), but only those that depend on \alpha
+/* Computes the logarithm of -p(x_i^m|z_{ik}=1, \theta) for given i, k and m, 
+ * but only those terms that depend on \alpha
+ * I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value 
  * neg_log_evidence_i(data_row, lambda_matrix(k, _),LngammaLambda0_matrix(k, _));
-* dataRow=data_row 1 x S
-* Lambda=lambda_matrix (k, _) 1 x S
-* LnGammaLambda0=LngammaLambda0_matrix(k, _) 1 x S lngamma ( \alpha_{jk}^{(m)}  )
-*
+ * dataRow=data_row 1 x S
+ * Lambda=lambda_matrix (k, _) 1 x S
+ * LnGammaLambda0=LngammaLambda0_matrix(k, _) 1 x S lngamma ( \alpha_{jk}^{(m)}  )
+ *
 */
 
 // [[Rcpp::export]]
@@ -393,7 +396,7 @@ double neg_log_evidence_i(IntegerVector dataRow, NumericVector Lambda,
     return dLogE + dLogEAlpha;
 }
 
-/* Computes the E-step
+/* Computes the E-step, i.e. the posterior probabilities of the cluster labels
  * Z=Ez K x N matrix (from the previous E-step, these are not used?)
  * data=binned.data list of M matrixes of size N x S
  * W=weights vector of length K, \pi_k^{old}
@@ -437,18 +440,19 @@ NumericMatrix calc_z(NumericMatrix Z, List data,
 
     for (i = 0; i < N; i ++) {
         double dSum = 0.0;
-        NumericVector offset(M);
-
+        NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
+        // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
         for (m = 0; m < M; m++) {
-          offset[m] = BIG_DBL;
+          offset[m] = BIG_DBL; //1.0e9
 
           IntegerMatrix data_matrix = as<IntegerMatrix>(data[m]); // N x S matrix
           NumericMatrix lambda_matrix = as<NumericMatrix>(Lambda[m]); //K x S matrix
           NumericMatrix LngammaLambda0_matrix = as<NumericMatrix>(LngammaLambda0[m]); // K x S lngamma ( \alpha_{jk}^{(m)}  )
           IntegerVector data_row = data_matrix(i, _); // one row of X of length S
           for (k = 0; k < K; k++) {
-              //Computes the logarithm of p(\mathbf{x}_i|\bm{\theta}) but of only those
+              //Computes the logarithm of -p(\mathbf{x}_i|z_{ik}=1,\bm{\theta}) but of only those
               // terms that depend on \alpha
+              // I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value
               //logarithm due to numerical purposes
               double dNegLogEviI =neg_log_evidence_i(data_row, lambda_matrix(k, _),
                                      LngammaLambda0_matrix(k, _));
@@ -457,15 +461,16 @@ NumericMatrix calc_z(NumericMatrix Z, List data,
                   // LngammaLambda0_matrix(k, _) 1 x S lngamma ( \alpha_{jk}^{(m)}  )
 
 
-              if (dNegLogEviI < offset[m]) //1.0e9
+              if (dNegLogEviI < offset[m]) //1.0e9 Can this explode?
                   offset[m] = dNegLogEviI;
               evidence_matrix(m, k) = dNegLogEviI;
           } //over K
         } //over M
+        
         for (k = 0; k < K; k++) {
           Z(k, i) = 0;
             for (m = 0; m < M; m++) {
-              Z(k, i) += (-(evidence_matrix(m, k) - offset[m])); //why offset is substracted??
+              Z(k, i) += (-(evidence_matrix(m, k) - offset[m])); //why offset is substracted?? For numerical reasons?
           }
           Z(k, i) = W[k] * exp(Z(k, i)); //back from logaritm, multiply by the weights i.e. \pi_k
           dSum += Z(k, i); //normalization constant
@@ -477,8 +482,15 @@ NumericMatrix calc_z(NumericMatrix Z, List data,
 }
 
 /* Function whose convergence is checked in each EM iteration
- * Computes the marginal posterior given Z? p(X,Z|\theta)p+ p(\theta)
- * does not consider \pi
+ * Computes the marginal posterior given Z? p(X,Z|\theta)p+ p(\theta) NO
+ * Computes the marginal likelihood, p(X,Z) or p(X|Z)?
+ * 
+ * Computes log p(\theta,Z| X) \propto log p(X,Z|theta) + log p(theta)
+ * the terms in log p(theta) that do not depend on alpha do not affect the convergence, 
+ * why they are computed? In addition, one constant term is missing?
+ * W weights 1xK, these are \pi_k values
+ * lambda list of KxS matrices
+ * binned.data NxS
 */
 
 // [[Rcpp::export]]
@@ -536,7 +548,7 @@ double neg_log_likelihood(NumericVector W, List Lambda,
         double dProb = 0.0;
         NumericMatrix LogStore(M, K);
         NumericVector offset(M);
-
+        // Computes the log p(x_i^m|, z_ik=1, theta) for k and m, results in matrix LogStore
         for (m = 0; m < M; m++) {
           double dSum = 0.0; // \sum_j^S x_ij
           double dFactor = 0.0; // \sum_j^S lng( x_ij +1) - lngamma( \sum_j^S x_ij +1)
@@ -566,20 +578,21 @@ double neg_log_likelihood(NumericVector W, List Lambda,
               //LogStore (m,k) seems to be p(\mathbf{x}_i|\theta) but without term \Gamma(J_i^{m}+1)
               // LogStore= lng( \alpha_jk + x_ij ) - lng( \sum_j^S \alpha_jk + x_ij )
               // -\sum_j^S lng (alpha_jk) + lngamma( \sum_j^S \alpha_jk) - \sum_j^S lng( x_ij +1)
-              LogStore(m, k) = dLogBAlphaN - LogBAlpha(m, k) - dFactor;
+              LogStore(m, k) = dLogBAlphaN - LogBAlpha(m, k) - dFactor; // the positive? log marginal likelihood of sample x_i^m for cluster k
               if (LogStore(m, k) > offset(m))
                   offset(m) = LogStore(m, k);
           } //over K
         } //over M
-
+       
+        //offset?
         for (k = 0; k < K; k++) {
             double piK = W[k]/N; //\pi weights not E[z]???
             dProb += piK*exp(sum(LogStore(_, k)) - sum(offset)); //sum of column k over m rows
         }
-        dRet += log(dProb)+sum(offset); //dRet of log \sum_k^K(\pi_k*p(x|\theta_k)) without Gamma (J_i^m-1) term
-    }
+        dRet += log(dProb)+sum(offset); //logarithm of the normalization term, sum over all n
+    } //over N
 
-    dL5 = -sum(S) * K * gsl_sf_lngamma(eta); // -M*S*L*lng(eta)
+    dL5 = -sum(S) * K * gsl_sf_lngamma(eta); // -M*S*K*lng(eta)
     dL6 = eta * K * sum(S) * log(nu);  //eta*K*M*S*log(nu)
 
     if ((etah!=0) || (nuh!=0)) {
@@ -587,7 +600,7 @@ double neg_log_likelihood(NumericVector W, List Lambda,
     }
 
     for (m = 0; m < M; m++) {
-      NumericMatrix Lambda_matrix = as<NumericMatrix>(Lambda[m]);
+      NumericMatrix Lambda_matrix = as<NumericMatrix>(Lambda[m]); //K x S matrix
 
       for (i = 0; i < K; i++) {
 
@@ -601,7 +614,7 @@ double neg_log_likelihood(NumericVector W, List Lambda,
       } // over K
     }  // over M
     dL7 *= -nu; //-nu* \sum_j^S \alpha_kj^m
-    dL8 *= eta; // eta * \sum_j^S \lambda_kj^m
+    dL8 *= eta; // eta * \sum_j^S \lambda_kj^m SHOULD BE (eta-1)
     return -dRet - dL5 - dL6 - dL7 - dL8 - regterm1 - regterm2;
     //
 
