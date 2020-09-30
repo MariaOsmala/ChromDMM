@@ -28,7 +28,7 @@ void disable_gsl_error_handler() {
  gsl_set_error_handler_off();
 }
 
-//computes the value of function f for j=index, input lambda values
+//computes the value of function g for j=index, input lambda values
 double REG_DERIV_LAMBDA_G(NumericVector lambda, int index) {
   int prev = index - 1, next = index + 1;
   if (index == 0) prev = 0;
@@ -194,7 +194,9 @@ List soft_kmeans(NumericMatrix data,
 }
 
 /*The function below computes the value of the lower bound to be optimized
- * i.e. the whole expected log posterior Q. Does not consider \pi. Computes the value for one cluster k and datatype m
+ * i.e. the whole expected log posterior Q
+ * Computes the term only depending on \alpha_{k}^m or \lambda_l^m
+ * . Does not consider \pi. Computes the value for one cluster k and datatype m
  * lambda are the current values, lparams contains the current parameter values (E(z_i))
  * List of 8
  $ pi       : Named num [1:1000] 0.38 0.313 0.289 0.346 0.278 ... These are z_i
@@ -277,10 +279,11 @@ double neg_log_evidence_lambda_pi(NumericVector lambda, List lparams)
       GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term; //prior term, ITA corrected to ITA-1 !!!
 }
 
-/* A function to return the gradient for the BFGS, derivative of the expected log posterior wrt lambda
+/* A function to return the gradient for the BFGS, derivative of the 
+ * expected negative log posterior wrt lambda
  * lambda are the current values, lparams contains the current parameter values (E(z_i))
- * There might be again an error with GAMMA_ITA vs (GAMMA_ITA -1),
- * GAMMA_ITA_H seems for the regularization seems to as expected
+ * There might be again an error with GAMMA_ITA vs (GAMMA_ITA -1), now corrected
+ * GAMMA_ITA_H for the regularization seems to as expected
  */
 
 // [[Rcpp::export]]
@@ -482,12 +485,10 @@ NumericMatrix calc_z(NumericMatrix Z, List data,
 }
 
 /* Function whose convergence is checked in each EM iteration
- * Computes the marginal posterior given Z? p(X,Z|\theta)p+ p(\theta) NO
- * Computes the marginal likelihood, p(X,Z) or p(X|Z)?
- * 
  * Computes log p(\theta,Z| X) \propto log p(X,Z|theta) + log p(theta)
  * the terms in log p(theta) that do not depend on alpha do not affect the convergence, 
  * why they are computed? In addition, one constant term is missing?
+ * (\eta-1) term needs to be corrected !!??
  * W weights 1xK, these are \pi_k values
  * lambda list of KxS matrices
  * binned.data NxS
@@ -539,11 +540,11 @@ double neg_log_likelihood(NumericVector W, List Lambda,
 
               dSumAlphaK += dAlpha; // \sum_j^S \alpha_jk
               LogBAlpha(m, k) += lngammaAlpha; // \sum_j^S lng (alpha_jk)
-          }
+          } //over j
           LogBAlpha(m, k) -= gsl_sf_lngamma(dSumAlphaK); // \sum_j^S lng (alpha_jk) -lngamma( \sum_j^S \alpha_jk)
-      }
+      } // over k
       LngammaLambda0[m] = clone(LngammaLambda0_matrix);
-    }
+    } // over m
     for (i = 0; i < N; i++) {
         double dProb = 0.0;
         NumericMatrix LogStore(M, K);
@@ -559,7 +560,7 @@ double neg_log_likelihood(NumericVector W, List Lambda,
           NumericMatrix LngammaLambda0_matrix = as<NumericMatrix>(LngammaLambda0[m]); // lng (alpha_jk)
 
           for (j = 0; j < S[m]; j++) {
-              dSum += data_matrix(i, j); // \sum_j^S x_ij
+              dSum += data_matrix(i, j); // dSum_m
               dFactor += gsl_sf_lngamma(data_matrix(i, j) + 1.0); // \sum_j^S lng( x_ij +1)
           }
           dFactor -= gsl_sf_lngamma(dSum + 1.0);  // \sum_j^S lng( x_ij +1) - lngamma( \sum_j^S x_ij +1)
@@ -614,7 +615,7 @@ double neg_log_likelihood(NumericVector W, List Lambda,
       } // over K
     }  // over M
     dL7 *= -nu; //-nu* \sum_j^S \alpha_kj^m
-    dL8 *= eta; // eta * \sum_j^S \lambda_kj^m SHOULD BE (eta-1)
+    dL8 *= (eta-1); // eta * \sum_j^S \lambda_kj^m SHOULD BE (eta-1)
     return -dRet - dL5 - dL6 - dL7 - dL8 - regterm1 - regterm2;
     //
 
@@ -699,6 +700,15 @@ double optimization_func(IntegerVector shift_dist,
   return -res;
 }
 
+
+
+/* Computes the Hessian matrix, some terms missing? Error in the order of calculation
+ * lambda[[m]][k, ], 1xS
+* Pi=Ez[k, ], 1x1000
+* binned.data[[m]], 1000xS
+* nu 1
+ */
+
 // [[Rcpp::export]]
 NumericMatrix hessian(NumericVector Lambda, NumericVector Pi,
                       IntegerMatrix data, double nu)
@@ -724,14 +734,16 @@ NumericMatrix hessian(NumericVector Lambda, NumericVector Pi,
         const double dPsi1Alpha = gsl_sf_psi_1(adAlpha[j]);
         for (i = 0; i < N; i++) {
             const int n = data(i, j);
-            adCJK0[j] += Pi[i] * n ? gsl_sf_psi(adAlpha[j] + n) : dPsiAlpha;
+            //Rcout << adCJK0[j] << " ";
+            adCJK0[j] += Pi[i] * n ? gsl_sf_psi(adAlpha[j] + n) : dPsiAlpha; //Pi=Ez[k,], Test that Pi[i]*n !=0 ?? or Pi[i] multiplied by the conditional
+            //Rcout << adCJK0[j] << " " << Pi[i] << " "<< n << " " << Pi[i]*n << " " << gsl_sf_psi(adAlpha[j] + n) << " "<< dPsiAlpha << "\n";
             adAJK0[j] += Pi[i] * dPsiAlpha;
             adCJK[j] += Pi[i] * n ? gsl_sf_psi_1(adAlpha[j] + n): dPsi1Alpha;
             adAJK[j] += Pi[i] * dPsi1Alpha;
         }
     }
 
-    for (i = 0; i < N; i++) {
+    for (i = 0; i < N; i++) { 
         dW += Pi[i];
         dCSum = 0.0;
         for (j = 0; j < S; j++)

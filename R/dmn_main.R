@@ -82,7 +82,7 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
 #'
 #' @param count signals.subset, a list of chromatin feature signals,
 #' each element is a N x window matrix. If matrix, converted to a list
-#' @param K vector of the number of clusters
+#' @param K the number of clusters, scalar not vector
 #' @param bin.width bin_size 40 (default 50)
 #' @param shift.ratio default 1/8
 #' @param verbose Print progress as "DMN, K=%d, M=%d, Iteration=%d", k, M, r) default FALSE
@@ -397,9 +397,7 @@ DMN.cluster <- function(count.data,
     if (verbose)
       cat('\nCalculating negative log likelihood...\n')
 
-    #calculate neg. likelihood for convergence
-    # Computes the marginal posterior given Z? p(X,Z|\theta)p+ p(\theta)
-    # does not consider \pi
+    #calculates neg. unnormalized posterior for convergence
     # weights 1xK (unnormalized, are normalized by this function/div by N)
     #lambda list of K times S matrices
     #binned.data N times S
@@ -427,20 +425,26 @@ DMN.cluster <- function(count.data,
   for (m in 1:M) {
     for (k in 1:K) {
       if (k > 1)
-        logDet <- logDet + 2.0 * log(N) - log(weights[k])
-
-      hess <- hessian(lambda[[m]][k, ], Ez[k, ], binned.data[[m]], nu)
-      luhess <- lu(hess) #LU decomposition
+        logDet <- logDet + 2.0 * log(N) - log(weights[k]) #unnormalized weights, should one normalize first?
+      #The computation of Hessian misses the regularization prior terms?
+      #Why Ez[k,] used in the computation of Hessian? What is the function to be derived twice? Energy function?
+      hess <- hessian(lambda[[m]][k, ], Ez[k, ], binned.data[[m]], nu) #SxS matrix
+      #lambda[[m]][k, ], 1xS
+      #Ez[k, ], 1x1000
+      #binned.data[[m]], 1000xS
+      #nu 1
+      luhess <- Matrix::lu(hess) #LU decomposition
       invHess <- Matrix::solve(luhess) #inverse of Hessian matrix
 #       err[k, ] <- diag(invHess)
       logDet <- logDet + sum(log(abs(Matrix::diag(Matrix::expand(luhess)$U))))
     }
   }
 
-  P <- K*sum(S)+K-1
-  gof.laplace <- last.nll + 0.5 * logDet - 0.5 * P * log(2.0 * pi);
-  gof.BIC <- last.nll + 0.5 * log(N) * P
-  gof.AIC <- last.nll + P
+  P <- K*sum(S)+K-1 #k=S x K x M + (K-1) This should change for different every M_k?
+  #gof.laplace is -log p(X|M_k) 
+  gof.laplace <- last.nll + 0.5 * logDet - 0.5 * P * log(2.0 * pi); ## last.nll given by neg_log_likelihood, this is approx. -log(X|M_k)
+  gof.BIC <- last.nll + 0.5 * log(N) * P #this is -BIC
+  gof.AIC <- last.nll + P #this is 0.5*AIC
   gof <- c(NLE=last.nll, LogDet=logDet, Laplace=gof.laplace, BIC=gof.BIC, AIC=gof.AIC)  #goodness of fit
 
   result <- list()
@@ -451,7 +455,7 @@ DMN.cluster <- function(count.data,
   #result$Mixture <- list(Weight=mixture_list$Mixture)
   result$Mixture <- list(Weight=weights/N)
 
-  EM.diagnostics <- ddply(EM.diagnostics, c('Datatype', 'Component', 'EM.iter'),
+  EM.diagnostics <- plyr::ddply(EM.diagnostics, c('Datatype', 'Component', 'EM.iter'),
                           transform, NO.iter.count=length(hkm), NO.iter=seq_along(hkm))
   result$EM.diagnostics <- EM.diagnostics
 
