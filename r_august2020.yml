@@ -1,12 +1,15 @@
 name: r_august2020
 channels:
+  - conda-forge
+  - bioconda
   - defaults
 dependencies:
   - r-essentials
   - r-rcppgsl
-  - rstudio
   - r-devtools
   - bioconductor-genomeinfodb
   - bioconductor-genomicranges
   - r-e1071
 prefix: /Users/mpirttin/anaconda3/envs/r_august2020
+
+
