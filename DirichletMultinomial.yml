@@ -1,0 +1,16 @@
+name: DirichletMultinomial
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-essentials
+  - r-rcppgsl
+  - r-devtools
+  - bioconductor-genomeinfodb
+  - bioconductor-genomicranges
+  - r-e1071
+  - r-ggally
+prefix: /Users/mpirttin/anaconda3/envs/DirichletMultinomial
+
+
