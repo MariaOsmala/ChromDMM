@@ -1,0 +1,27 @@
+name: DMM_experiments
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-essentials
+  - r-rcpp
+  - r-ggplot2
+  - r-reshape2
+  - bioconductor-s4vectors
+  - r-rcppgsl
+  - r-devtools
+  - bioconductor-genomeinfodb
+  - bioconductor-genomicranges
+  - bioconductor-iranges
+  - r-e1071
+  - r-ggally
+  - gsl
+  - clang
+  - r-gtools
+  - r-cairo
+  - r-rocr
+  - r-plyr
+  - r-dplyr
+
+
