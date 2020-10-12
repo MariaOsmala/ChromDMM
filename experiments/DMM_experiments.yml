@@ -23,5 +23,10 @@ dependencies:
   - r-rocr
   - r-plyr
   - r-dplyr
+  - r-egg
+  - r-gridextra
+  - r-grid
+  - r-ggpubr
+
 
 
