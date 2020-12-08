@@ -130,6 +130,24 @@ plot.circular.ideogram <- function(gr, labels, ...) {
 }
 
 
+#' DO NOT USE THIS This functions plots the means of the clusters before or after clustering'
+#' @param data 
+#' @param labels 
+#' @param ... 
+#' @param fun 
+#' @param rotatex 
+#' @param title 
+#' @param smooth 
+#' @param xbreaks 
+#' @param facet 
+#' @param smoothness 
+#' @param scales 
+#' @param ncol 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plot.clusters <- function(data, labels, ..., fun = mean, rotatex = T,
                           title='Cluster mean signals',smooth='gam', xbreaks=10,
                           facet='grid', smoothness=25, scales=NULL, ncol=NULL) {
@@ -207,28 +225,41 @@ plot.clusters <- function(data, labels, ..., fun = mean, rotatex = T,
   gg
 }
 
-plot.EM <- function(fit, smoothness.scale='free') {
+#' plot.EM plots EM diagnostics
+#'
+#' @param fit 
+#' @param smoothness.scale 
+#'
+#' @return
+#' @export
+#'
+#' @examples
+plot.EM <- function(fit, smoothness.scale='free', k=10) {
 
   EM.diagnostics <- fit@EM.diagnostics
   K <- ncol(mixture(fit))
   #plot hkm values
+  comp.labels=paste0("Cluster ", seq(1,k,1))
+  names(comp.labels)=seq(1,k,1)
+  
   hkm.plot <- ggplot(EM.diagnostics,
                      aes(seq_along(hkm), hkm, color=EM.iter)) +
     geom_line(aes(group=Datatype)) +
     geom_point(shape=1) +
-    facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K) +
+    facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
     labs(title='Numerical optimization iterations vs. regularization term', x='Numerical optimization iterations', y=expression(h[k]^(m))) +
 #     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
 #     scale_color_brewer(palette='Blues') +
     scale_color_continuous('EM iterations') +
     theme_minimal()
-
+  
+  
   #plot number of num.opt. iterations
   nop <- ggplot(EM.diagnostics, aes(EM.iter, NO.iter.count)) +
     geom_line(aes(color=factor(Datatype))) +
     geom_point(aes(color=factor(Datatype))) +
-    geom_smooth(method='gam', formula=y~s(x, k=10, bs='cs')) +
-    facet_grid(Datatype~Component) +
+    #geom_smooth(method='gam', formula=y~s(x, k=k, bs='cs')) +
+    facet_grid(Datatype~Component, labeller=labeller(Component=comp.labels)) +
     guides(color=F) +
     labs(title='EM iterations vs. Numerical optimization iterations', x='EM iterations', y='Numerical optimization iterations') +
     theme_minimal()
@@ -314,13 +345,30 @@ plot.clustering.comparison <- function(fits1, fits2, num, method='exact') {
 }
 
 
+
+
+
+#' DO NOT USE THIS This functions draws the heatmaps after clustering
+#'
+#' @param cl can be DMN object or just the data
+#' @param labels 
+#' @param show.param 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 plot.heatmap <- function(cl, labels, show.param=T) {
 
+  #cl=fits[[2]]
+  #labels=mixture(fits[[2]],assign=TRUE)
+  
+  
   if (class(cl) == "DMN")
     data <- cl@Data
   else {
     data <- cl
-    show.param <- F
+    #show.param <- F
   }
 
 
