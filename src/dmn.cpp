@@ -216,17 +216,20 @@ double neg_log_evidence_lambda_pi(NumericVector lambda, List lparams)
 {
     int i, j;
 
-    IntegerMatrix aanX = as<IntegerMatrix>(lparams["data"]); // N x S
-    NumericVector adPi = as<NumericVector>(lparams["pi"]);   // size N, these are z_i
+    IntegerMatrix aanX = as<IntegerMatrix>(lparams["data"]); // N x L_x
+    NumericVector adPi = as<NumericVector>(lparams["pi"]);   // size N, these are z_{km}
     double GAMMA_ITA = as<double>(lparams["eta"]);
     double GAMMA_NU = as<double>(lparams["nu"]);
     double GAMMA_ITA_H = as<double>(lparams["etah"]);
     double GAMMA_NU_H = as<double>(lparams["nuh"]);
 
-    const int S = aanX.ncol(), N = aanX.nrow();
+    const int S = aanX.ncol(); // L_x
+    const int N = aanX.nrow();
+    
     /*dLogE collects the terms \sum_{n=1}^N \sum_{j=1}^S E[z_i] \log \gamma (x_ij+ alpha_j)
     and \sum_{n=1}^N E[z_i]* lng( \sum_j(x_ij+alpha-j) )*/
     double dLogE = 0.0;
+    
     double dLogEAlpha = 0.0; // \log \gamma ( \sum_{j=1}^S  \alpha_{j} )
     double dSumAlpha = 0.0; // sum of alpha \sum_{j=1}^S \alpha_{j}
     double dSumLambda = 0.0; // sum of lambda?
@@ -639,8 +642,8 @@ double optimization_func(IntegerVector shift_dist,
                          NumericMatrix Z) {
 
   double res = 0;
-  int K = Z.nrow();
-  Function shift_and_flip_signal("shift.and.flip.signal");
+  int K = Z.nrow(); //cluster number
+  Function shift_and_flip_signal("shift.and.flip.signal"); //this function is in util.R
 
   if (shift_dist.length() != index.length()) {
     throw std::length_error("Shift distance vector and index length do not match.");
@@ -655,6 +658,7 @@ double optimization_func(IntegerVector shift_dist,
   //shift.and.flip.signal <- function(data=binned.data, indices=wrap(index), dist, flip)
   //shifts and flips the samples of index index by shift_dist, can be also used to flip the
   // samples, the shifted and flipped samples should be the same
+  // This function is in util.R
   List shifteddata = shift_and_flip_signal(data,
                                            wrap(index), //onverting from C++ to R using Rcpp::wrap(obj)
                                            wrap(shift_dist),

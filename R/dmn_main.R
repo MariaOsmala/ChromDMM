@@ -74,7 +74,8 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
   if(optim.result$convergence != 0)
     warning('!!!!! Numerical Optimization did not converge !!!!!!!\n')
 
-  return(optim.result$par)
+  #return(optim.result$par)
+  return(optim.result)
 }
 
 #' DMN.cluster fit the DirichletMultinomial mixture model
@@ -268,16 +269,20 @@ DMN.cluster <- function(count.data,
                          width=40,
                          style=3)
   }
-
+  lambda_optim_message<-vector(mode = 'list', M)
+  hkm_list<-vector(mode = 'list', M)
+  
   #Initialize the lambda values by optimizing Q wrt the lambda values
   for (m in 1:M) { #over data types
+    lambda_optim_message[[m]]<-list()
+    hkm_list[[m]]<-list()
     for (k in 1:K) { #over clusters
       if (verbose)
         setTxtProgressBar(pb, (m-1)*K+k)
       hkm <- vector(mode = 'list', maxNumOptIter+1)
 
       #the lambda_{kj}^{(m)} can be optimized for each k and m separately
-      lambda[[m]][k,] <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
+      optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
                                            data=binned.data[[m]],
                                            Z=Ez[k,],
                                            hkm=hkm,
@@ -288,6 +293,10 @@ DMN.cluster <- function(count.data,
                                            verbose=verbose,
                                            MAX_GRAD_ITER=maxNumOptIter,
                                            reltol=numOptRelTol)
+      hkm_list[[m]][[k]]=hkm
+      lambda[[m]][k,] <-optim.result$par
+      lambda_optim_message[[m]][[k]]<-optim.result
+      
     }
   }
 
@@ -301,6 +310,17 @@ DMN.cluster <- function(count.data,
   last.nll <- 0
   nll.change <- .Machine$double.xmax #1.797693e+308
   EM.diagnostics <- data.frame()
+  
+  EM_lambda_optim_message <- vector(mode = 'list', EM.maxit+1)
+  EM_lambda_optim_message[[1]]<- lambda_optim_message
+  EM_hkm_list<- vector(mode = 'list', EM.maxit+1)
+  EM_hkm_list[[1]]=hkm_list
+  
+  nll_list<- vector(mode = 'list', EM.maxit+1)
+  nll_list[[1]] <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
+  nll.change_list<- vector(mode = 'list', EM.maxit+1)
+  
+  
   #E-step
   #M-step
   #shifting and flipping
@@ -328,14 +348,17 @@ DMN.cluster <- function(count.data,
                            width=40,
                            style=3)
     }
-
+    lambda_optim_message<-vector(mode = 'list', M)
+    hkm_list<-vector(mode = 'list', M)
     for (m in seq_len(M)) {
+      lambda_optim_message[[m]]<-list()
+      hkm_list[[m]]<-list()
       for (k in seq_len(K)) {
         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
 
         hkm <- vector(mode = 'list', maxNumOptIter+1)
-        lambda[[m]][k,] <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
+        optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
                                              data=binned.data[[m]],
                                              Z=Ez[k,],
                                              hkm=hkm,
@@ -346,20 +369,27 @@ DMN.cluster <- function(count.data,
                                              verbose=verbose,
                                              MAX_GRAD_ITER=maxNumOptIter,
                                              reltol=numOptRelTol)
+        
 
-
+        lambda[[m]][k,] <-optim.result$par
+        lambda_optim_message[[m]][[k]]<-optim.result
+        
+        
+        hkm_list[[m]][[k]] <- hkm
 
 
         hkm <- unlist(hkm)
         hkm <- data.frame(Datatype=names(binned.data)[m],
                           Component=k,
                           EM.iter=iter,
-                          hkm=hkm)
+                          hkm=hkm, nll=optim.result$value)
         EM.diagnostics <- rbind(EM.diagnostics, hkm)
       }
     }
     #save.image("/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/DMM-private-master-devel-works/shif.flip.debugging.RData")
-
+    EM_lambda_optim_message[[iter+2]]<- lambda_optim_message
+    
+    EM_hkm_list[[iter+2]]=hkm_list
     stopifnot(!is.na(unlist(lambda)), !is.infinite(unlist(lambda)))
 
     if ((shift.ratio > 0 && shift.reads) || flip){
@@ -403,8 +433,10 @@ DMN.cluster <- function(count.data,
     #binned.data N times S
     nll <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
     stopifnot(!is.na(nll), !is.infinite(nll))
-
+    nll_list[[iter+2]]<-nll
+    
     nll.change <- abs(last.nll - nll)
+    nll.change_list[[iter+1]]<-nll.change
     last.nll <- nll
 
     iter <- iter+1
@@ -418,7 +450,7 @@ DMN.cluster <- function(count.data,
   # hessian
   if (verbose)
     cat("  Hessian\n")
-
+  nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
 #   err <- matrix(0, K, S)
   logDet <- 0
 

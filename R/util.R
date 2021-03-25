@@ -46,7 +46,7 @@ shift.and.flip.signal <- function(binned, indices, dist, flip) {
   shifts[indices] <- shifts[indices] + dist
   attr(binned, 'shifts') <- shifts
 
-  #update limits, the possible limits change to prevent
+  #update limits, the possible limits change to prevent exceeding the boundaries
   limits <- attr(binned, 'shift.limits')
   limits[indices,] <- limits[indices,] - dist
   attr(binned, 'shift.limits') <- limits
@@ -62,6 +62,20 @@ shift.and.flip.signal <- function(binned, indices, dist, flip) {
   binned
 }
 
+#' Most sophisticated integer minimizer
+#'
+#' @param fn optimization_func,
+#' @param limits 
+#' @param index sample indexes?
+#' @param step 
+#' @param parallel 
+#' @param verbose 
+#' @param ... 
+#'
+#' @return
+#' @export
+#'
+#' @examples
 most.sophisticated.integer.minimizer <- function(fn,
                                                  limits,
                                                  index,
@@ -85,8 +99,18 @@ most.sophisticated.integer.minimizer <- function(fn,
     negresult <- fn(p-step, i, ...)
     posresult <- fn(p+step, i, ...)
     initialresult <- fn(p, i, ...)
+    
+    #optimization_func(IntegerVector shift_dist,
+    #                  IntegerVector index,
+    #                  LogicalVector flip,
+    #                  List data,
+    #                  List alpha,
+    #                  NumericMatrix Z)
+    #negresult <- fn(p-step, i, flip=F,data, alpha, Z)
+    #posresult <- fn(p+step, i, flip=F,data, alpha, Z)
+    #initialresult <- fn(p, i, flip=F,data,alpha,Z)
 
-    if (initialresult < negresult && initialresult < posresult)
+    if (initialresult < negresult && initialresult < posresult) #shifting does not help
       return(p)
 
     if (negresult < posresult) {
@@ -103,20 +127,21 @@ most.sophisticated.integer.minimizer <- function(fn,
 
       nextp <- progfn(p, step)
 
-      if (nextp < minlimit || nextp > maxlimit)
+      if (nextp < minlimit || nextp > maxlimit) #we are over limits
         break
 
 #       print(sprintf('Trying %d...', nextp))
       result <- fn(nextp, i, ...)
-
-      if(prevresult <= result)
+      #result <- fn(nextp, i, flip, data, alpha,Z)
+      if(prevresult <= result) #we have reached the optimum
         break
 
       prevresult <- result
       p <- nextp
-    }
+    } #repeat
     p
-  }
+  } #fminimizer
+  
   if(parallel) {
     simplify2array(mclapply(seq_along(initparams), fminimizer, pb=NULL, mc.cores=detectCores()))
   } else {
@@ -155,6 +180,18 @@ most.sophisticated.integer.minimizer <- function(fn,
 #' @examples
 #'
 
+# fn=optimization_func
+# limits=attr(binned.data, 'shift.limits')
+# step=bin.width
+# parallel.shift=parallel.shift
+# verbose=verbose
+# shift.reads=shift.reads
+# flip=flip
+# data=binned.data
+# alpha=lapply(lambda, exp)
+# Z=Ez
+
+
 brute.force.integer.minimizer <- function(fn,
                                           limits,
                                           step=10,
@@ -168,6 +205,7 @@ brute.force.integer.minimizer <- function(fn,
   stopifnot(shift.reads || flip)
   #res <- lapply(seq_along(initparams), fminimizer, progress.bar=progress.bar)
   #pindex is 1:N
+  #fminimizer(1, progress.bar)
   fminimizer <- function(pindex, progress.bar){
     if(!is.null(progress.bar)) setTxtProgressBar(progress.bar, pindex)
 
@@ -188,14 +226,15 @@ brute.force.integer.minimizer <- function(fn,
     #first shifts
     #optimization_func( dist.candidates[1], pindex, flip=F)
     result <- sapply(dist.candidates, function(p)fn(p, pindex, flip=F, ...))
-
-
+    
+    # result <- sapply(dist.candidates, function(p)fn(p, pindex, flip=F, data, alpha, Z))
     if(flip) {
       result.with.flip <- sapply(dist.candidates, function(p)fn(p, pindex, flip=T, ...))
-      if (min(result.with.flip) < min(result)) {
+      #result.with.flip <- sapply(dist.candidates, function(p)fn(p, pindex, flip=T, data, alpha, Z))
+      if (min(result.with.flip) < min(result)) { #flipping improves the value
         best$flip <- T
         best$shift <- dist.candidates[which.min(result.with.flip)]
-      } else {
+      } else { #flipping does not improve the value
         best$shift <- dist.candidates[which.min(result)]
         best$flip <- F
       }
