@@ -1,6 +1,6 @@
 
 
-#' Optimize lambda
+#' Optimize lambda without shift or flip
 #' lambda_{k}^{(m)} are the lambda parameters of length S for cluster k and chromatin feature m
 #'
 #' @param LambdaK lambda[[m]][k,] lambda_{} current lambda values
@@ -78,6 +78,98 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
   return(optim.result)
 }
 
+#' Optimize lambda with shift without flip
+#' lambda_{k}^{(m)} are the lambda parameters of length La for cluster k and chromatin feature m
+#'
+#' @param LambdaK lambda[[m]][k,] lambda_{} current lambda values
+#' @param data data=binned.data[[m]] N x Lx matrix
+#' @param Z Ez_k, the posterior probabilities for samples originating from cluster k, Z<-array(0,dim=c(S,N))
+#' @param hkm long list, first empty
+#' @param eta
+#' @param nu
+#' @param etah
+#' @param nuh
+#' @param method default method='BFGS'
+#' @param verbose
+#' @param MAX_GRAD_ITER maxNumOptIter, 1000
+#' @param reltol numOptRelTol 1e-12
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#'
+#'
+#'
+optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, eta, nu,
+                                         etah, nuh, method='BFGS',
+                                         verbose=FALSE, MAX_GRAD_ITER=1000,
+                                         reltol = 1e-12) {
+  
+  hkm_index <- vector(mode='integer', 1)
+  params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
+                 hkm=hkm, hkm_index=hkm_index)
+  
+  optim.result <- optim(LambdaK, fn=neg_log_evidence_lambda_pi_shift,
+                        gr=neg_log_derive_evidence_lambda_pi_shift, params,
+                        method=method, control = list(maxit = MAX_GRAD_ITER,
+                                                      reltol = reltol))
+  
+  
+  if(optim.result$convergence != 0)
+    warning('!!!!! Numerical Optimization did not converge !!!!!!!\n')
+  
+  #return(optim.result$par)
+  return(optim.result)
+}
+
+#' Optimize lambda with shift and flip
+#' lambda_{k}^{(m)} are the lambda parameters of length La for cluster k and chromatin feature m
+#'
+#' @param LambdaK lambda[[m]][k,] lambda_{} current lambda values
+#' @param data data=binned.data[[m]] N x Lx matrix
+#' @param Z Ez_k, the posterior probabilities for samples originating from cluster k, Z<-array(0,dim=c(S,2,N))
+#' @param hkm long list, first empty
+#' @param eta
+#' @param nu
+#' @param etah
+#' @param nuh
+#' @param method default method='BFGS'
+#' @param verbose
+#' @param MAX_GRAD_ITER maxNumOptIter, 1000
+#' @param reltol numOptRelTol 1e-12
+#'
+#' @return
+#' @export
+#'
+#' @examples
+#'
+#'
+#'
+optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, eta, nu,
+                              etah, nuh, method='BFGS',
+                              verbose=FALSE, MAX_GRAD_ITER=1000,
+                              reltol = 1e-12) {
+  
+  hkm_index <- vector(mode='integer', 1)
+  params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
+                 hkm=hkm, hkm_index=hkm_index)
+ 
+  optim.result <- optim(LambdaK, fn=neg_log_evidence_lambda_pi_shift_flip,
+                        gr=neg_log_derive_evidence_lambda_pi_shift_flip, params,
+                        method=method, control = list(maxit = MAX_GRAD_ITER,
+                                                      reltol = reltol))
+  
+  
+  if(optim.result$convergence != 0)
+    warning('!!!!! Numerical Optimization did not converge !!!!!!!\n')
+  
+  #return(optim.result$par)
+  return(optim.result)
+}
+
+
+
 #' DMN.cluster fit the DirichletMultinomial mixture model
 #' The user of the package can not use this function directly but through dmn
 #'
@@ -85,10 +177,10 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
 #' each element is a N x window matrix. If matrix, converted to a list
 #' @param K the number of clusters, scalar not vector
 #' @param bin.width bin_size 40 (default 50)
-#' @param shift.ratio default 1/8
+#' @param S the number of shift states, if shift is true, this needs to be odd number of at least 3, default 1(no shift)
 #' @param verbose Print progress as "DMN, K=%d, M=%d, Iteration=%d", k, M, r) default FALSE
 #' @param seed default false
-#' @param shift.reads default true
+#' @param shift default false
 #' @param flip default false
 #' @param eta default 0.1
 #' @param nu default 0.1
@@ -113,18 +205,19 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
 DMN.cluster <- function(count.data,
                         K,
                         bin.width=50,
-                        shift.ratio=1/8,
+                        S=1,
                         seed=F,
-                        shift.reads=T,
+                        shift.reads=F,
                         flip=F,
                         parallel.shift=F,
                         verbose=F,
                         eta=0.1, nu=0.1,
                         etah=0, nuh=0,
+                        xi=NULL,
                         EM.maxit=250, EM.threshold=1e-6,
                         soft.kmeans.maxit=1000, soft.kmeans.stiffness=50,
                         randomInit=T,
-                        maxNumOptIter=1000, numOptRelTol=1e-12) {
+                        maxNumOptIter=1000, numOptRelTol=1e-12,...) {
 
   if (seed != F) set.seed(seed)
 
@@ -140,10 +233,10 @@ DMN.cluster <- function(count.data,
     count.data <- lapply(count.data, function(cd)cd[-zero.indices,])
   }
 
-  if(!shift.reads) shift.ratio <- 0
+  if(!shift.reads) S <- 1
 
-  if (shift.reads && (shift.ratio > 1 || shift.ratio < 0 ))
-    stop('Shift ratio must be between 0 and 1')
+  if (shift.reads && ( S%%2 == 0 || S==1 ))
+    stop('Number of shift states must be odd and at least 3')
 
   M <- length(count.data)
 
@@ -163,9 +256,9 @@ DMN.cluster <- function(count.data,
   disable_gsl_error_handler()
 
   N <- nrow(count.data[[1]]) #number of samples
-  S.nonbinned <- sapply(count.data, ncol) #original window
+  Wx <- sapply(count.data, ncol) #original window W_x
 
-  if (sum(S.nonbinned %% bin.width) != 0)
+  if (sum(Wx %% bin.width) != 0)
     stop('Data column length is not a multiple of bin width')
 
   # These windows represent the portion of the data that we are
@@ -175,40 +268,40 @@ DMN.cluster <- function(count.data,
   #
   # TODO: Add support for matrices with different num. of columns
   # 50*(1/16) =3
-  left.limit <- right.limit <- floor( (min(S.nonbinned)/bin.width) * (shift.ratio/2) )
-
+  #left.limit <- right.limit <- floor( (min(Wx)/bin.width) * (shift.ratio/2) )
+  left.limit <- right.limit <- floor( (min(Wx)/bin.width) * (0/2) )
   inner.windows <- IRangesList(start=as.list(rep(1, N)),
-                               end=as.list(rep(min(S.nonbinned), N)))
+                               end=as.list(rep(min(Wx), N)))
   inner.windows <- resize(inner.windows,
-                          min(S.nonbinned)-((left.limit + right.limit)*bin.width), #2000 - (3+3)*40 =2000-240=1760
+                          min(Wx)-((left.limit + right.limit)*bin.width), #2000 - (3+3)*40 =2000-240=1760
                           fix='center')
 
   #initialize binned data and do row/col naming
   binned.data <- Map(function(data, ind){
-    m <- matrix(0, N, width(inner.windows[[ind]])/bin.width) #N x (1760/40 =44)
+    m <- matrix(0, N, width(inner.windows[[ind]])/bin.width) #N x (Wx/B=50)
     rownames(m) <- paste0('loc', seq_len(N))
     colnames(m) <- paste0('bin', seq_len(ncol(m)))
     m
   }, count.data, seq_len(M))
 
-  maxlimits <- left.limit * bin.width #120
-  minlimits <- -right.limit * bin.width #-120
+  #maxlimits <- left.limit * bin.width #120
+  #minlimits <- -right.limit * bin.width #-120
 
   # add nonbinned data, windows, shifts and bin width as attributes
   # to the binned data
   attr(binned.data, 'nonbinned') <- count.data #N x window matrices
   attr(binned.data, 'windows') <- inner.windows
-  attr(binned.data, 'shifts') <- numeric(N)
-  attr(binned.data, 'flips') <- logical(N) #boolean vector
+  attr(binned.data, 'shifts') <- numeric(N) #optimal shift state
+  attr(binned.data, 'flips') <- logical(N) #boolean vector, optimal flip state
   attr(binned.data, 'bin.width') <- bin.width
-  attr(binned.data, 'shift.limits') <- matrix(c(minlimits, maxlimits),
-                                              nrow=N, ncol=2, byrow=T)
+  #attr(binned.data, 'shift.limits') <- matrix(c(minlimits, maxlimits),
+  #                                            nrow=N, ncol=2, byrow=T)
 
   #bin data and define shifting function
   #extract_binned_signal converts numerical matrix into an integer matrix
   #Does nothing?
   binned.data <-extract_binned_signal(binned.data, seq_len(N)) #binned.data$H3K4me1: NxS matrix
-  S <- sapply(binned.data, ncol)
+  Lx <- sapply(binned.data, ncol)
 
   #row-wise normalization of all datatypes for soft-kmeans
 
@@ -242,268 +335,32 @@ DMN.cluster <- function(count.data,
    print(table(apply(kmeans.res$labels, 2, which.max)))
   }
 
+
+    
   alpha <- kmeans.res$centers #K x (M*S)
   stopifnot(!is.na(alpha), !is.infinite(alpha))
 
   #split centers given by soft kmeans, i.e. unconcatenate
-  col.ends <- cumsum(S)
-  col.starts <- col.ends - S + 1
+  col.ends <- cumsum(Lx)
+  col.starts <- col.ends - Lx + 1
   alpha <- mapply(function(s,e)alpha[,s:e,drop=F], col.starts, col.ends, SIMPLIFY = F) #List of M
 
-  #lambda is log(alpha)
-  alpha <- lapply(alpha, function(a){a[a <= 0] <- 1e-6;a})
-  lambda <- lapply(alpha, log) #natural logarithm by default
-
-  stopifnot(!is.na(unlist(lambda)), !is.infinite(unlist(lambda)))
-
-  Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
-  weights <- rowSums(Ez) #initial values for \bm{\pi}
-
-  if (verbose) {
-    cat('Expectation Maximization setup\n')
-
-    pb <- txtProgressBar(min = 1,
-                         max = ifelse(M*K > 1, M*K, 2),
-                         initial = 1,
-                         title='Numerical optimization',
-                         width=40,
-                         style=3)
-  }
-  lambda_optim_message<-vector(mode = 'list', M)
-  hkm_list<-vector(mode = 'list', M)
-  
-  #Initialize the lambda values by optimizing Q wrt the lambda values
-  for (m in 1:M) { #over data types
-    lambda_optim_message[[m]]<-list()
-    hkm_list[[m]]<-list()
-    for (k in 1:K) { #over clusters
-      if (verbose)
-        setTxtProgressBar(pb, (m-1)*K+k)
-      hkm <- vector(mode = 'list', maxNumOptIter+1)
-
-      #the lambda_{kj}^{(m)} can be optimized for each k and m separately
-      optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
-                                           data=binned.data[[m]],
-                                           Z=Ez[k,],
-                                           hkm=hkm,
-                                           eta=eta,
-                                           nu=nu,
-                                           etah=etah,
-                                           nuh=nuh,
-                                           verbose=verbose,
-                                           MAX_GRAD_ITER=maxNumOptIter,
-                                           reltol=numOptRelTol)
-      hkm_list[[m]][[k]]=hkm
-      lambda[[m]][k,] <-optim.result$par
-      lambda_optim_message[[m]][[k]]<-optim.result
-      
-    }
-  }
-
-  stopifnot(!is.na(unlist(lambda)), !is.infinite(unlist(lambda)))
-
-  if (verbose)
-    cat('\nExpectation Maximization\n')
-
-  #EM loop
-  iter <- 0
-  last.nll <- 0
-  nll.change <- .Machine$double.xmax #1.797693e+308
-  EM.diagnostics <- data.frame()
-  
-  EM_lambda_optim_message <- vector(mode = 'list', EM.maxit+1)
-  EM_lambda_optim_message[[1]]<- lambda_optim_message
-  EM_hkm_list<- vector(mode = 'list', EM.maxit+1)
-  EM_hkm_list[[1]]=hkm_list
-  
-  nll_list<- vector(mode = 'list', EM.maxit+1)
-  nll_list[[1]] <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
-  nll.change_list<- vector(mode = 'list', EM.maxit+1)
-  
-  
-  #E-step
-  #M-step
-  #shifting and flipping
-  while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
-
-    if (verbose)
-      cat('Calculating Ez values...\n')
-
-    #Computes the E-step, the posterior probabilities of the cluster labels
-    #The old Ez values not really used
-    # returns K x N matrix Z
-    #why offset subtracted?
-    Ez <- calc_z(Ez, binned.data, weights, lambda)
-
-    stopifnot(!is.na(Ez), !is.infinite(Ez))
-
-    #Computes M-step, same for lambda as the EM initialization
-    if (verbose) {
-      cat('Optimizing lambda...\n')
-
-      pb <- txtProgressBar(min = 1,
-                           max = ifelse(M*K > 1, M*K, 2),
-                           initial = 1,
-                           title='Numerical optimization',
-                           width=40,
-                           style=3)
-    }
-    lambda_optim_message<-vector(mode = 'list', M)
-    hkm_list<-vector(mode = 'list', M)
-    for (m in seq_len(M)) {
-      lambda_optim_message[[m]]<-list()
-      hkm_list[[m]]<-list()
-      for (k in seq_len(K)) {
-        if (verbose)
-          setTxtProgressBar(pb, (m-1)*K+k)
-
-        hkm <- vector(mode = 'list', maxNumOptIter+1)
-        optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
-                                             data=binned.data[[m]],
-                                             Z=Ez[k,],
-                                             hkm=hkm,
-                                             eta=eta,
-                                             nu=nu,
-                                             etah=etah,
-                                             nuh=nuh,
-                                             verbose=verbose,
-                                             MAX_GRAD_ITER=maxNumOptIter,
-                                             reltol=numOptRelTol)
-        
-
-        lambda[[m]][k,] <-optim.result$par
-        lambda_optim_message[[m]][[k]]<-optim.result
-        
-        
-        hkm_list[[m]][[k]] <- hkm
-
-
-        hkm <- unlist(hkm)
-        hkm <- data.frame(Datatype=names(binned.data)[m],
-                          Component=k,
-                          EM.iter=iter,
-                          hkm=hkm, nll=optim.result$value)
-        EM.diagnostics <- rbind(EM.diagnostics, hkm)
-      }
-    }
-    #save.image("/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/DMM-private-master-devel-works/shif.flip.debugging.RData")
-    EM_lambda_optim_message[[iter+2]]<- lambda_optim_message
+  if(shift.reads==TRUE && flip==TRUE){
     
-    EM_hkm_list[[iter+2]]=hkm_list
-    stopifnot(!is.na(unlist(lambda)), !is.infinite(unlist(lambda)))
-
-    if ((shift.ratio > 0 && shift.reads) || flip){
-      if (verbose)
-        cat('\nOptimizing shift/flip parameters...\n')
-      #this is in util.R
-      #optimization_func is in dmn.cpp, what does it try to optimize?
-      #returns $shift (length N vector)
-      #returns $flip (length N locigal)
-      best.shift.and.flip.params <- brute.force.integer.minimizer(fn=optimization_func,
-                                                     limits=attr(binned.data, 'shift.limits'),
-                                                     step=bin.width,
-                                                     parallel.shift=parallel.shift,
-                                                     verbose=verbose,
-                                                     shift.reads=shift.reads,
-                                                     flip=flip,
-                                                     data=binned.data,
-                                                     alpha=lapply(lambda, exp),
-                                                     Z=Ez)
-      if (verbose) {
-        cat('\nRead shifting frequencies: \n')
-        print(table(best.shift.and.flip.params$shift))
-
-        cat('\nRead flip parameters: \n')
-        print(table(best.shift.and.flip.params$flip))
-
-      }
-      binned.data <- shift.and.flip.signal(binned.data, seq_len(N),
-                                           best.shift.and.flip.params$shift,
-                                           best.shift.and.flip.params$flip)
-    } #end of shifting and flipping
-
-    weights <- rowSums(Ez) # \pi_k values Ez is K x N matrix, are these normalized? Should this be rowMeans?
-
-    if (verbose)
-      cat('\nCalculating negative log likelihood...\n')
-
-    #calculates neg. unnormalized posterior for convergence
-    # weights 1xK (unnormalized, are normalized by this function/div by N)
-    #lambda list of K times S matrices
-    #binned.data N times S
-    nll <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
-    stopifnot(!is.na(nll), !is.infinite(nll))
-    nll_list[[iter+2]]<-nll
+  }else if(shift.reads==TRUE && flip==FALSE){ #only shift
+    result=dmn.em.shift(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, S=S, xi=xi, alpha=alpha, 
+                              M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
+                              maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
+                              eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
+                              EM.maxit=EM.maxit, EM.threshold=EM.threshold)
+  }else if(shift.reads==FALSE && flip==TRUE){ #only flip
     
-    nll.change <- abs(last.nll - nll)
-    nll.change_list[[iter+1]]<-nll.change
-    last.nll <- nll
-
-    iter <- iter+1
-
-    if (verbose)
-      print(paste('--> EM Iteration:', iter, 'Neg.LL change:', round(nll.change, 6)))
-  } #EM loop ends
-
-
-  # Model selection
-  # hessian
-  if (verbose)
-    cat("  Hessian\n")
-  nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
-#   err <- matrix(0, K, S)
-  logDet <- 0
-
-  for (m in 1:M) {
-    for (k in 1:K) {
-      if (k > 1)
-        logDet <- logDet + 2.0 * log(N) - log(weights[k]) #unnormalized weights, should one normalize first?
-      #The computation of Hessian misses the regularization prior terms?
-      #Why Ez[k,] used in the computation of Hessian? What is the function to be derived twice? Energy function?
-      hess <- hessian(lambda[[m]][k, ], Ez[k, ], binned.data[[m]], nu) #SxS matrix
-      #lambda[[m]][k, ], 1xS
-      #Ez[k, ], 1x1000
-      #binned.data[[m]], 1000xS
-      #nu 1
-      luhess <- Matrix::lu(hess) #LU decomposition
-      invHess <- Matrix::solve(luhess) #inverse of Hessian matrix
-#       err[k, ] <- diag(invHess)
-      logDet <- logDet + sum(log(abs(Matrix::diag(Matrix::expand(luhess)$U))))
-    }
+  }else{ # shift.reads==FALSE && flip==FALSE
+    result = dmn.em(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
+                    maxNumOptIter=maxNumOptIter, binned.data=binned.data, eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
+                    EM.maxit=EM.maxit, EM.threshold=EM.threshold)
   }
 
-  P <- K*sum(S)+K-1 #k=S x K x M + (K-1) This should change for different every M_k?
-  #gof.laplace is -log p(X|M_k) 
-  gof.laplace <- last.nll + 0.5 * logDet - 0.5 * P * log(2.0 * pi); ## last.nll given by neg_log_likelihood, this is approx. -log(X|M_k)
-  gof.BIC <- last.nll + 0.5 * log(N) * P #this is -BIC
-  gof.AIC <- last.nll + P #this is 0.5*AIC
-  gof <- c(NLE=last.nll, LogDet=logDet, Laplace=gof.laplace, BIC=gof.BIC, AIC=gof.AIC)  #goodness of fit
-
-  result <- list()
-
-  result$GoodnessOfFit <- gof
-  result$Group <- t(Ez)
-  #mixture_list <- mixture_output(binned.data, weights, lambda, err)
-  #result$Mixture <- list(Weight=mixture_list$Mixture)
-  result$Mixture <- list(Weight=weights/N)
-
-  EM.diagnostics <- plyr::ddply(EM.diagnostics, c('Datatype', 'Component', 'EM.iter'),
-                          transform, NO.iter.count=length(hkm), NO.iter=seq_along(hkm))
-  result$EM.diagnostics <- EM.diagnostics
-
-  if(verbose) {
-    print('Mixture weights: ')
-    print(weights)
-    print('Hard labels:')
-    print(table(apply(result$Group, 1, which.max)))
-  }
-
-  #result$Fit <- list(Estimate=t(mixture_list$Estimate),
-  #                   Upper=t(mixture_list$Upper),
-  #                   Lower=t(mixture_list$Lower))
-
-  result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
-  result$Data <- binned.data #shifted and flipped data
-
+  
   return(result)
 }

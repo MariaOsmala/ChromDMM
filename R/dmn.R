@@ -4,7 +4,9 @@ setClass("DMN",
                                   mixture="list",
                                   fit="list",
                                   EM.diagnostics="data.frame",
-                                  Data="list"))
+                                  Data="list",
+                                  nll.data="data.frame",
+                                  EM_lambda_optim_message="list"))
 
 .DMN <-
     function(goodnessOfFit, group, mixture, fit, ...)
@@ -22,10 +24,10 @@ setClass("DMN",
 #' each element is a N x window matrix. If matrix, converted to a list
 #' @param K vector of the number of clusters
 #' @param bin.width bin_size 40 (default 50)
-#' @param shift.ratio default 1/8
+#' @param S the number of shift states, if shift true, this needs to be odd number of at least 3, default 1(no shift)
 #' @param verbose Print progress as "DMN, K=%d, M=%d, Iteration=%d", k, M, r) default FALSE
 #' @param seed default false
-#' @param shift.reads default true
+#' @param shift default false
 #' @param flip default false
 #' @param eta default 0.1
 #' @param nu default 0.1
@@ -51,15 +53,16 @@ dmn <-
     function(count,
              K,
              bin.width=50,
-             shift.ratio=1/8,
+             S=1,
              verbose=FALSE,
              seed=F,
-             shift.reads=T,
+             shift.reads=F,
              flip=F,
              eta=0.1,
              nu=0.1,
              etah=0,
              nuh=0,
+             xi=NULL,
              maxIt=250,
              EM.threshold=1e-6,
              soft.kmeans.maxit=1000,
@@ -92,20 +95,19 @@ dmn <-
       ans <- DMN.cluster(count.data=count,
                          K=k,
                          bin.width=bin.width,
-                         shift.ratio=shift.ratio,
+                         S=S,
                          seed=seed,
                          shift.reads=shift.reads,
                          flip=flip,
                          verbose=verbose,
                          eta=eta, nu=nu,
-                         etah=etah, nuh=nuh,
+                         etah=etah, nuh=nuh, xi=xi,
                          EM.maxit=maxIt, EM.threshold=EM.threshold,
                          soft.kmeans.maxit=soft.kmeans.maxit,
                          soft.kmeans.stiffness=soft.kmeans.stiffness,
                          randomInit=randomInit,
                          maxNumOptIter=maxNumOptIter,
-                         numOptRelTol=numOptRelTol,
-                         ...)
+                         numOptRelTol=numOptRelTol)
       o <- order(ans$Mixture$Weight, decreasing=TRUE)
       ans <- within(ans, {
           Group <- Group[,o, drop=FALSE]
@@ -113,13 +115,17 @@ dmn <-
           Fit <- rapply(Fit, function(mat){mat[, o, drop=F]}, how='replace')
           EM.diagnostics <- EM.diagnostics
           Data <- Data
+          nll.data <- nll.data
+          EM_lambda_optim_message <- EM_lambda_optim_message
       })
       with(ans, .DMN(goodnessOfFit=GoodnessOfFit,
                      group=Group,
                      mixture=Mixture,
                      fit=Fit,
                      EM.diagnostics=EM.diagnostics,
-                     Data=Data))
+                     Data=Data,
+                     nll.data=nll.data,
+                     EM_lambda_optim_message=EM_lambda_optim_message))
     } #repet.func ends
 
     if (length(K) == 1) {
@@ -136,7 +142,7 @@ dmn <-
 
       best <- which.min(sapply(results, BIC))
       return(results[[best]])
-    }
+    } #length(K) == 1
     else {
       k.and.r <- expand.grid(K=K, R=seq_len(repetition))
       if (parallel) {
@@ -155,6 +161,7 @@ dmn <-
                             repet.func(r, k)
                             })
       }
+      
       results <- split(results, k.and.r$K)
       results <- lapply(results, function(rep)rep[[which.min(sapply(rep, BIC))]])
       return (results)

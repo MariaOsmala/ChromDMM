@@ -1,0 +1,24 @@
+name: DirichletMultinomial_R4.0.3
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-essentials
+  - r-rcpp
+  - r-rcpparmadillo
+  - r-ggplot2
+  - r-reshape2
+  - bioconductor-s4vectors
+  - bioconductor-biocgenerics
+  - r-rcppgsl
+  - r-devtools
+  - bioconductor-genomeinfodb
+  - bioconductor-genomicranges
+  - bioconductor-iranges
+  - r-e1071
+  - r-ggally
+  - gsl
+  - clang
+
+

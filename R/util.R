@@ -24,7 +24,7 @@ csubset <- function(val, x, pheno, cidx=TRUE)
 #                      indices=1
 #                      dist=dist.candidates[1],
 #                      flip=F;
-#save.image("/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/DMM-private-master-devel-works/shift.and.flip.signal.RData")
+#
 #this function shifts the samples (given as indices) by a shift=dist
 #this function is also used to flip the samples
 shift.and.flip.signal <- function(binned, indices, dist, flip) {

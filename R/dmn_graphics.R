@@ -229,18 +229,97 @@ plot.clusters <- function(data, labels, ..., fun = mean, rotatex = T,
 #'
 #' @param fit 
 #' @param smoothness.scale 
-#'
+#' @param EM_lambda_optim_message
+#' @param skip
 #' @return
 #' @export
 #'
 #' @examples
-plot.EM <- function(fit, smoothness.scale='free', k=10) {
+# plot.EM <- function(fit, smoothness.scale='free', k=10) {
+# 
+#   EM.diagnostics <- fit@EM.diagnostics
+#   K <- ncol(mixture(fit))
+#   #plot hkm values
+#   comp.labels=paste0("Cluster ", seq(1,k,1))
+#   names(comp.labels)=seq(1,k,1)
+#   
+#   hkm.plot <- ggplot(EM.diagnostics,
+#                      aes(seq_along(hkm), hkm, color=EM.iter)) +
+#     geom_line(aes(group=Datatype)) +
+#     geom_point(shape=1) +
+#     facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
+#     labs(title='Numerical optimization iterations vs. regularization term', x='Numerical optimization iterations', y=expression(h[k]^(m))) +
+# #     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
+# #     scale_color_brewer(palette='Blues') +
+#     scale_color_continuous('EM iterations') +
+#     theme_minimal()
+#   
+#   
+#   #plot number of num.opt. iterations
+#   nop <- ggplot(EM.diagnostics, aes(EM.iter, NO.iter.count)) +
+#     geom_line(aes(color=factor(Datatype))) +
+#     geom_point(aes(color=factor(Datatype))) +
+#     #geom_smooth(method='gam', formula=y~s(x, k=k, bs='cs')) +
+#     facet_grid(Datatype~Component, labeller=labeller(Component=comp.labels)) +
+#     guides(color=F) +
+#     labs(title='EM iterations vs. Numerical optimization iterations', x='EM iterations', y='Numerical optimization iterations') +
+#     theme_minimal()
+# 
+#   #create a grid layout and print ggplots on it
+#   grid.newpage()
+#   pushViewport(viewport(layout = grid.layout(2, 1)))
+#   vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+#   print(hkm.plot, vp = vplayout(1, 1))
+#   print(nop, vp = vplayout(2, 1))
+# 
+# }
 
-  EM.diagnostics <- fit@EM.diagnostics
-  K <- ncol(mixture(fit))
+plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=1) {
+  
+  #EM_lambda_optim_message=fit[[2]]@EM_lambda_optim_message
+  #fit=fit[[2]]
+  EM.iters<-which(sapply(EM_lambda_optim_message, length)!=0)
+  K=ncol(fit@fit$Estimate[[mi]])
+  M=length(fit@Data)
+  EM.nll.diagnostics<-data.frame()
+  
+  for(mi in 1:M){
+    for(ki in 1:K){
+      for(iter in (1+skip):EM.iters[length(EM.iters)]){
+        nll.diag<-data.frame(Datatype=names(fit@Data)[mi],
+                             Component=ki,
+                             EM.iter=iter,
+                             nll=EM_lambda_optim_message[[iter]][[mi]][[ki]]$value)
+        EM.nll.diagnostics <- rbind(EM.nll.diagnostics, nll.diag)
+      }
+      
+    }
+  }
   #plot hkm values
-  comp.labels=paste0("Cluster ", seq(1,k,1))
-  names(comp.labels)=seq(1,k,1)
+  
+  comp.labels=paste0("Cluster ", seq(1,K,1))
+  names(comp.labels)=seq(1,K,1)
+  
+  
+  nll.plot <- ggplot(EM.nll.diagnostics,
+                     aes(EM.iter, nll, )) +
+    geom_line(aes(group=Datatype)) +
+    geom_point(shape=1) +
+    facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
+    labs(title='EM iterations vs. BFGS neg.log.lik', x='EM iterations', 
+         y="nll" ) +
+    #     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
+    #     scale_color_brewer(palette='Blues') +
+    scale_color_continuous('EM iterations') +
+    theme_minimal()
+  
+  
+  
+  
+  EM.diagnostics <- fit@EM.diagnostics
+  
+  
+  
   
   hkm.plot <- ggplot(EM.diagnostics,
                      aes(seq_along(hkm), hkm, color=EM.iter)) +
@@ -248,10 +327,13 @@ plot.EM <- function(fit, smoothness.scale='free', k=10) {
     geom_point(shape=1) +
     facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
     labs(title='Numerical optimization iterations vs. regularization term', x='Numerical optimization iterations', y=expression(h[k]^(m))) +
-#     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
-#     scale_color_brewer(palette='Blues') +
+    #     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
+    #     scale_color_brewer(palette='Blues') +
     scale_color_continuous('EM iterations') +
     theme_minimal()
+  
+  
+  
   
   
   #plot number of num.opt. iterations
@@ -263,14 +345,15 @@ plot.EM <- function(fit, smoothness.scale='free', k=10) {
     guides(color=F) +
     labs(title='EM iterations vs. Numerical optimization iterations', x='EM iterations', y='Numerical optimization iterations') +
     theme_minimal()
-
+  
   #create a grid layout and print ggplots on it
   grid.newpage()
-  pushViewport(viewport(layout = grid.layout(2, 1)))
+  pushViewport(viewport(layout = grid.layout(3, 1)))
   vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
   print(hkm.plot, vp = vplayout(1, 1))
-  print(nop, vp = vplayout(2, 1))
-
+  print(nll.plot, vp = vplayout(2, 1))
+  print(nop, vp = vplayout(3, 1))
+  
 }
 
 plot.label.distribution <- function(fits,
