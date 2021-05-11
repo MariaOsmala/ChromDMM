@@ -8,7 +8,7 @@ dependencies:
   - r-rcpp
   - r-ggplot2
   - r-reshape2
-  - ply
+  - r-plyr
   - bioconductor-s4vectors
   - r-rcppgsl
   - r-devtools

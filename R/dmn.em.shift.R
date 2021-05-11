@@ -2,7 +2,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
                    maxNumOptIter, binned.data, eta, nu, etah, nuh, numOptRelTol, 
                    EM.maxit, EM.threshold ) {
   
-  
+  #options(digits=-log10(numOptRelTol))
   Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
   #shift=true flip=false
   
@@ -11,7 +11,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   extend=floor(S/2)
   alpha_extend<-alpha
   for(m in 1:M){
-    print(m)
+    #print(m)
     tmp=matrix(0, nrow=K, ncol=extend*2+Lx[m])
     
     # if(K==1){
@@ -24,7 +24,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     #   
     # }else{ #K>1
       for(k in 1:K){
-        print(k)
+        #print(k)
         tmp[k,]=c(rep(0, extend), alpha[[m]][k,], rep(0, extend))
         minval=min(alpha[[m]][k,1],alpha[[m]][k,ncol(alpha[[m]])])
         tmp[k,1:extend]=minval
@@ -38,34 +38,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   }
   
   alpha=alpha_extend
-  # alpha.data <- ldply(alpha, function(d) {
-  #   d <- as.data.frame(t(d))
-  #   d$j <- factor(1:nrow(d))
-  #   colnames(d)=c(as.character(seq(1,K)),"Bin")
-  #   d <- melt(d, variable.name = "cluster",
-  #             value.name = "alpha")
-  #   d$alpha <- as.numeric(d$alpha)
-  #   d
-  # }, .id = "Datatype")
-  # 
-  # ggparams <- ggplot(alpha.data, aes(Bin, alpha, group = "cluster") )
-  # 
-  # ggparams <- ggparams +  geom_area(fill = "brown")
-  # ggparams <- ggparams + labs(x = "", y = "") + guides(color = F)
-  # #ggparams <- ggparams +  scale_x_discrete(breaks = seq(0, S[m], 10),
-  # #                   expand = c(0, 0))
-  # ggparams <- ggparams +  scale_x_discrete(breaks = NULL,
-  #                                          expand = c(0, 0,0.01,0))
-  # 
-  # 
-  # ggparams <- ggparams + theme_minimal()
-  # ggparams <- ggparams + theme(plot.margin = margin,
-  #                              axis.ticks.margin = unit(c(0, 0), "mm"),
-  #                              panel.margin = unit(c(0, 0, 0, 0), "mm"))
-  # ggparams <- ggparams + facet_wrap(~Datatype+cluster, ncol=K, labeller=labeller(Component=as.character(seq(1,K))))
-  # 
-  # plot(ggparams)
-  # 
+
   Ez2 <- array(0,dim=c(K,S,N))#This is 3D for each i
   for(i in 1:N){
     for(k in 1:K){
@@ -82,6 +55,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   
   
   weights <- rowSums(Ez) #initial values for \bm{\pi}
+  weights <- (weights/sum(weights)*100) #these need to be numbers between 0 and zero
   
   if (verbose) {
     cat('Expectation Maximization setup\n')
@@ -136,8 +110,15 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   
   #EM loop
   iter <- 0
-  last.nll <- 0
+  last.nll <- .Machine$double.xmax
+  last.nLB <- .Machine$double.xmax
+  
   nll.change <- .Machine$double.xmax #1.797693e+308
+  nLB.change <- .Machine$double.xmax #1.797693e+308
+  
+  real.change<- .Machine$double.xmax #1.797693e+308
+  nLB.real.change <- .Machine$double.xmax #1.797693e+308 
+  
   EM.diagnostics <- data.frame()
   
   EM_lambda_optim_message <- vector(mode = 'list', EM.maxit+1)
@@ -145,22 +126,31 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   EM_hkm_list<- vector(mode = 'list', EM.maxit+1)
   EM_hkm_list[[1]]=hkm_list
   
-  nll_list<- vector(mode = 'list', EM.maxit+1)
-  #function neg_log_likelihood is used to check the convergence
- 
-  #Maybe not feasible to check the first value?
-  nll_list[[1]] <- neg_log_likelihood_shift(weights, xi, lambda, binned.data, eta, nu, etah, nuh,S) #DONE!
-
-  nll.change_list<- vector(mode = 'list', EM.maxit+1)
+  #use negative lower bound to check the convergence
+  nLB_list<- vector(mode = 'list', EM.maxit+1)
+  nll_list<- vector(mode = 'list', EM.maxit+1) #save also this, does not necessarily decrease
   
+  #
+  nll_iter=1
+  nll_list[[nll_iter]] <- neg_log_likelihood_shift(weights, xi, lambda, binned.data, eta, nu, etah, nuh,S) #DONE!
+  last.nll <- nll_list[[nll_iter]]
+  nll_iter=nll_iter+1
+  
+  nLB_iter=1
+  nLB_list[[nLB_iter]] <- neg_lower_bound_shift(Ez, weights, xi, lambda, binned.data, eta, nu, etah, nuh, S)
+  last.nLB <- nLB_list[[nLB_iter]]
+  nLB_iter=nLB_iter+1
+  
+  nll.change_list<- vector(mode = 'list', EM.maxit+1)
+  nLB.change_list<- vector(mode = 'list', EM.maxit+1)
   
   #E-step
   #M-step
   #shifting and flipping, one needs to write separate EM-loops for (shift=false, flip=false), 
   #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
   #4 different em-functions
-  while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
-    
+  while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
+    #print(iter)
     if (verbose)
       cat('Calculating Ez values...\n')
     
@@ -186,9 +176,11 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     lambda_optim_message<-vector(mode = 'list', M)
     hkm_list<-vector(mode = 'list', M)
     for (m in seq_len(M)) {
+      #print(m)
       lambda_optim_message[[m]]<-list()
       hkm_list[[m]]<-list()
       for (k in seq_len(K)) {
+        #print(k)
         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
         
@@ -243,7 +235,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     
     
     weights <- rowSums(Ez) # \pi_k values Ez is K xSz  N matrix, are these normalized? Should this be rowMeans?
-    
+    #weights <- weights/sum(weights)
     if (verbose)
       cat('\nCalculating negative log likelihood...\n')
     
@@ -254,24 +246,47 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     
    
     nll <- neg_log_likelihood_shift(weights, xi, lambda, binned.data, eta, nu, etah, nuh,S)
-       stopifnot(!is.na(nll), !is.infinite(nll))
-    nll_list[[iter+2]]<-nll
+    stopifnot(!is.na(nll), !is.infinite(nll))
+    nll_list[[nll_iter]]=nll
+    nll_iter=nll_iter+1
+   
+    nLB <- neg_lower_bound_shift(Ez, weights, xi, lambda,
+                                 binned.data, eta, nu,
+                                 etah, nuh, S)
+    stopifnot(!is.na(nLB), !is.infinite(nLB))
+    nLB_list[[nLB_iter]]=nLB
+    nLB_iter=nLB_iter+1
+
     
-    real.change=last.nll-nll
-    if(real.change< 0){
+    real.change=last.nll-nll #This needs to be positive
+    nLB.real.change=last.nLB-nLB
+    
+    if(real.change < -numOptRelTol){
       print("Warning: Neg.LL does not decrease!!!")
     }
     
-    nll.change <- abs(last.nll - nll)
-    nll.change_list[[iter+1]]<-nll.change
-    last.nll <- nll
+    if(nLB.real.change < -numOptRelTol){
+      print("Warning: Neg.LB does not decrease!!!")
+    }
     
+    nll.change <- abs(real.change)
+    nLB.change <- abs(nLB.real.change)
+    
+    nll.change_list[[iter+1]]<-nll.change
+    nLB.change_list[[iter+1]]<-nLB.change
+    
+    last.nll <- nll
+    last.nLB <- nLB
     iter <- iter+1
     
     if (verbose){
       
-      print(paste('--> EM Iteration:', iter, 'Neg.LL change:', round(nll.change, 6)))
-      print(paste0("Neg.LL ",nll))
+      print(paste('--> EM Iteration:', iter, 'Neg.LL change (absolute):', round(nll.change, -log10(numOptRelTol)) ))
+      print(paste('--> EM Iteration:', iter, 'Neg.LL change (real):', round(real.change, -log10(numOptRelTol)) ))
+      print(paste('--> EM Iteration:', iter, 'Neg.LB change (absolute):', round(nLB.change, -log10(numOptRelTol)) ))
+      print(paste('--> EM Iteration:', iter, 'Neg.LB change (real):', round(nLB.real.change, -log10(numOptRelTol)) ))
+      print(paste0("Neg.LL ",round(nll,-log(numOptRelTol)) ))
+      print(paste0("Neg.LL ",round(last.nLB, -log(numOptRelTol)) ))
     }
   } #EM loop ends
   
@@ -281,6 +296,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   #if (verbose)
   #  cat("  Hessian\n")
   nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
+  nLB.data<-data.frame(iter=which(sapply(nLB_list, length)!=0), nLB=unlist(nLB_list[which(sapply(nLB_list, length)!=0)]))
   #   err <- matrix(0, K, S)
   # logDet <- 0
   # 
@@ -325,6 +341,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   result$Group <- t(apply(Ez,c(1,3),sum))
   #result$Group2 <-  #sum to 1 for each n=1,..,N
   result$nll.data=nll.data
+  result$nLB.data=nLB.data
   result$EM_lambda_optim_message=EM_lambda_optim_message
   #mixture_list <- mixture_output(binned.data, weights, lambda, err)
   #result$Mixture <- list(Weight=mixture_list$Mixture)

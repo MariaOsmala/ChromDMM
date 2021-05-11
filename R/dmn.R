@@ -6,6 +6,7 @@ setClass("DMN",
                                   EM.diagnostics="data.frame",
                                   Data="list",
                                   nll.data="data.frame",
+                                  nLB.data="data.frame",
                                   EM_lambda_optim_message="list"))
 
 .DMN <-
@@ -42,6 +43,7 @@ setClass("DMN",
 #' @param maxNumOptIter default 1000
 #' @param numOptRelTol default 1e-12
 #' @param parallel default true
+#'@param init default "random"
 #'
 #' @return
 #' @export
@@ -71,7 +73,7 @@ dmn <-
              repetition=4,
              maxNumOptIter=1000,
              numOptRelTol=1e-12,
-             parallel=T)
+             parallel=T, init="random")
 {
     if (is.matrix(count)) count <- list(Data=count)
     stopifnot(is.list(count))
@@ -107,7 +109,7 @@ dmn <-
                          soft.kmeans.stiffness=soft.kmeans.stiffness,
                          randomInit=randomInit,
                          maxNumOptIter=maxNumOptIter,
-                         numOptRelTol=numOptRelTol)
+                         numOptRelTol=numOptRelTol, init=init)
       o <- order(ans$Mixture$Weight, decreasing=TRUE)
       ans <- within(ans, {
           Group <- Group[,o, drop=FALSE]
@@ -116,6 +118,7 @@ dmn <-
           EM.diagnostics <- EM.diagnostics
           Data <- Data
           nll.data <- nll.data
+          nLB.data <- nLB.data
           EM_lambda_optim_message <- EM_lambda_optim_message
       })
       with(ans, .DMN(goodnessOfFit=GoodnessOfFit,
@@ -125,6 +128,7 @@ dmn <-
                      EM.diagnostics=EM.diagnostics,
                      Data=Data,
                      nll.data=nll.data,
+                     nLB.data=nLB.data,
                      EM_lambda_optim_message=EM_lambda_optim_message))
     } #repet.func ends
 

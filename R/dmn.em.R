@@ -65,8 +65,15 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   
   #EM loop
   iter <- 0
-  last.nll <- 0
+  last.nll <- .Machine$double.xmax
+  last.nLB <- .Machine$double.xmax
+  
   nll.change <- .Machine$double.xmax #1.797693e+308
+  nLB.change <- .Machine$double.xmax #1.797693e+308
+  
+  real.change<- .Machine$double.xmax #1.797693e+308
+  nLB.real.change <- .Machine$double.xmax #1.797693e+308 
+  
   EM.diagnostics <- data.frame()
   
   EM_lambda_optim_message <- vector(mode = 'list', EM.maxit+1)
@@ -74,19 +81,32 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   EM_hkm_list<- vector(mode = 'list', EM.maxit+1)
   EM_hkm_list[[1]]=hkm_list
   
+  #use negative lower bound to check the convergence
+  nLB_list<- vector(mode = 'list', EM.maxit+1)
   nll_list<- vector(mode = 'list', EM.maxit+1)
   #function neg_log_likelihood is used to check the convergence
-  nll_list[[1]] <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
-  nll.change_list<- vector(mode = 'list', EM.maxit+1)
+  nll_iter=1
+  nll_list[[nll_iter]] <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
+  last.nll <- nll_list[[nll_iter]]
+  nll_iter=nll_iter+1
   
+  nLB_iter=1
+  nLB_list[[nLB_iter]] <- neg_lower_bound(Ez, weights, lambda, binned.data, eta, nu, etah, nuh)
+  last.nLB <- nLB_list[[nLB_iter]]
+  nLB_iter=nLB_iter+1
+  
+  nll.change_list<- vector(mode = 'list', EM.maxit+1)
+  nLB.change_list<- vector(mode = 'list', EM.maxit+1)
   
   #E-step
   #M-step
   #shifting and flipping, one needs to write separate EM-loops for (shift=false, flip=false), 
   #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
   #4 different em-functions
-  while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
-    
+  while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
+    print(iter)
+  #while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
+  #  print(iter)
     if (verbose)
       cat('Calculating Ez values...\n')
     
@@ -112,9 +132,11 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     lambda_optim_message<-vector(mode = 'list', M)
     hkm_list<-vector(mode = 'list', M)
     for (m in seq_len(M)) {
+      #print(m)
       lambda_optim_message[[m]]<-list()
       hkm_list[[m]]<-list()
       for (k in seq_len(K)) {
+        #print(k)
         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
         
@@ -194,21 +216,47 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     #binned.data N times S
     nll <- neg_log_likelihood(weights, lambda, binned.data, eta, nu, etah, nuh)
     stopifnot(!is.na(nll), !is.infinite(nll))
-    nll_list[[iter+2]]<-nll
+    nll_list[[nll_iter]]=nll
+    nll_iter=nll_iter+1
+  
+    nLB <- neg_lower_bound(Ez, weights, lambda,
+                                 binned.data, eta, nu,
+                                 etah, nuh)
+    stopifnot(!is.na(nLB), !is.infinite(nLB))
+    nLB_list[[nLB_iter]]=nLB
+    nLB_iter=nLB_iter+1
     
     real.change=last.nll-nll
-    if(real.change< 0){
+    nLB.real.change=last.nLB-nLB
+    
+    if(real.change< -numOptRelTol){
       print("Warning: Neg.LL does not decrease!!!")
     }
     
-    nll.change <- abs(last.nll - nll)
+    if(nLB.real.change < -numOptRelTol){
+      print("Warning: Neg.LB does not decrease!!!")
+    }
+    
+    nll.change <- abs(real.change)
+    nLB.change <- abs(nLB.real.change)
+    
     nll.change_list[[iter+1]]<-nll.change
+    nLB.change_list[[iter+1]]<-nLB.change
+    
     last.nll <- nll
+    last.nLB <- nLB
     
     iter <- iter+1
     
     if (verbose)
-      print(paste('--> EM Iteration:', iter, 'Neg.LL change:', round(nll.change, 6)))
+      print(paste('--> EM Iteration:', iter, 'Neg.LL change (absolute):', round(nll.change, -log10(numOptRelTol)) ))
+    print(paste('--> EM Iteration:', iter, 'Neg.LL change (real):', round(real.change, -log10(numOptRelTol)) ))
+    print(paste('--> EM Iteration:', iter, 'Neg.LB change (absolute):', round(nLB.change, -log10(numOptRelTol)) ))
+    print(paste('--> EM Iteration:', iter, 'Neg.LB change (real):', round(nLB.real.change, -log10(numOptRelTol)) ))
+    print(paste0("Neg.LL ",round(nll,-log(numOptRelTol)) ))
+    print(paste0("Neg.LL ",round(last.nLB, -log(numOptRelTol)) ))
+    
+    
   } #EM loop ends
   
   
@@ -217,6 +265,8 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   if (verbose)
     cat("  Hessian\n")
   nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
+  nLB.data<-data.frame(iter=which(sapply(nLB_list, length)!=0), nLB=unlist(nLB_list[which(sapply(nLB_list, length)!=0)]))
+
   #   err <- matrix(0, K, S)
   logDet <- 0
   
@@ -259,6 +309,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   result$GoodnessOfFit <- gof
   result$Group <- t(Ez)
   result$nll.data=nll.data
+  result$nLB.data=nLB.data
   result$EM_lambda_optim_message=EM_lambda_optim_message
   #mixture_list <- mixture_output(binned.data, weights, lambda, err)
   #result$Mixture <- list(Weight=mixture_list$Mixture)

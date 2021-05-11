@@ -282,6 +282,9 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List lparams
 
 
     //should it be (GAMMA_ITA-1)*dSumLambda???
+    Rprintf("LB value: %f\n", dLogE + dWeight*dLogEAlpha + 
+      GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term);
+    
     return dLogE + dWeight*dLogEAlpha + // complete data likelihood term
       GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term; //prior term, ITA corrected to ITA-1 !!!
 }
@@ -344,10 +347,13 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
 
     double hk = REG_H_LAMBDA(ptLambda);
 
-    if (hkm_index[0] < hkm.size()) hkm[hkm_index[0]] = hk;
-    else Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
+    if (hkm_index[0] < hkm.size()) {
+      hkm[hkm_index[0]] = hk;
+    }
+    else{
+      Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
                  hkm_index[0], hkm.size());
-
+    }
     hkm_index[0] += 1;
 
     for (j = 0; j < S; j++) {
@@ -366,6 +372,15 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
 
         g[j] = value;
     }
+    
+    double gnorm=0.0;
+    
+    for (j = 0; j < S; j++) {
+      gnorm += pow(g[j], 2.0);
+    }
+    gnorm=sqrt(gnorm);
+    
+    Rprintf("Gradient norm: %f\n", gnorm);
   return g;
 }
 
@@ -486,7 +501,7 @@ Rcpp::NumericMatrix calc_z(Rcpp::NumericMatrix Z, Rcpp::List data,
         } //over M
         
         for (k = 0; k < K; k++) {
-          Z(k, i) = 0;
+          Z(k, i) = 0.0;
             for (m = 0; m < M; m++) {
               Z(k, i) += (-(evidence_matrix(m, k) - offset[m])); //why offset is substracted?? For numerical reasons?
           }
@@ -641,6 +656,128 @@ double neg_log_likelihood(Rcpp::NumericVector W, Rcpp::List Lambda,
     //
 
 }
+
+/* DONE Function whose convergence is checked in each EM iteration
+ * Computes the negative lower bounds, terms only depending on theta and cluster assignment
+ * W weights 1xK, these are \pi_k values
+ * lambda list of length M, these are K x L matrices
+ * binned.data list of length M, NxL matrices
+ * Z=Ez K x N matrix 
+ */
+
+// [[Rcpp::export]]
+double neg_lower_bound(Rcpp::NumericMatrix Z, Rcpp::NumericVector W,
+                             Rcpp::List Lambda,Rcpp::List data, double eta, double nu,
+                             double etah, double nuh)
+{
+  
+  Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x L
+  const int N = temp.nrow();
+  //Rprintf("N: %i \n", N);
+  // Rcpp::Rcout << "N: "<<N << "\n";
+  const int K = W.length();
+  // Rcpp::Rcout << "K: "<<K << "\n";
+  const int M = data.size();
+  // Rcpp::Rcout << "M: "<<M << "\n";
+  int i, j, k, m;
+  
+  Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
+  
+  Rcpp::NumericVector L(M);
+  
+  for (m=0; m<M; m++) {
+    temp = as<Rcpp::IntegerMatrix>(data[m]); //N x L matrix
+    L[m] = temp.ncol(); //L
+  }
+  
+  
+    double dL7 = 0.0; //-nu* \sum_j^L \alpha_kj^m from prior
+  double dL8 = 0.0; // eta * \sum_j^L \lambda_kj^m from prior
+  double regterm2 = 0.0; // \sum_k^K ((etah - 1) * log(hkm) - nuh*hkm);  form prior
+  
+
+  
+  Rcpp::List LngammaLambda0(M); // lngamma ( \alpha_{jk}^{(m)}  )
+  
+  // Compute lngammaalpha_jkms
+  for (m = 0; m < M; m++) {
+    // Rcpp::Rcout << "m: "<<m << "\n";
+    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
+    Rcpp::NumericMatrix LngammaLambda0_matrix(K, L[m]); // lngamma ( \alpha_{jk}  )
+    for(k = 0; k < K; k++){
+      // Rcpp::Rcout << "k: "<<k << "\n";
+      for(j = 0; j < L[m]; j++){
+          const double dAlpha = exp(Lambda_matrix(k, j));
+          LngammaLambda0_matrix[k, j] = gsl_sf_lngamma(dAlpha);
+        } //j
+    } //k
+    LngammaLambda0(m) = LngammaLambda0_matrix;
+  } //m
+  
+  double dSum = 0.0;
+  for (m = 0; m < M; m++) {
+    
+    // offset[m] = BIG_DBL; //1.0e9
+    
+    Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x L matrix
+    Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x L matrix
+    // Rcpp::NumericMatrix Ln = as<Rcpp::NumericMatrix>(LngammaLambda0[m]); // K x L lngamma ( \alpha_{jk}^{(m)}  )
+    Rcpp::NumericMatrix LngammaLambda0_matrix = LngammaLambda0(m); //K x L
+    for (k = 0; k < K; k++) {
+        for (i = 0; i < N; i++) {
+        // Rcpp::NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
+        // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
+        Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
+    
+        
+        //Computes the logarithm of -p(\mathbf{x}_i|z_{ik}=1,\bm{\theta}) but of only those
+        // terms that depend on \alpha
+        // I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value
+        //logarithm due to numerical purposes
+        // computes the - log DirMulti(x_i^m | alpha_k^m), terms not depending on alpha excluded
+     
+        double dNegLogEviI =neg_log_evidence_i(data_row, lambda_matrix(k, _), //dNegLogEviI[k,s] is negative ->  +=
+                                            LngammaLambda0_matrix(k, _));
+        dSum += Z(k,i)*dNegLogEviI;
+        
+      } //over N
+      
+    } //over K
+  } //over M
+  
+
+  for(k = 0; k < K; k++){
+    double piK = W[k]/Rcpp::sum(W);
+    for(i = 0; i < N; i++){
+        dSum -= Z(k,i)*log(piK); // dNegLogEviI[k,s] is negative ->  +=
+    }
+  }
+  
+  for (m = 0; m < M; m++) {
+    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
+    
+    for (k = 0; k < K; k++) {
+      
+      if ((etah!=0) || (nuh!=0)) {
+        // exp(Lambda_matrix(i, _) are alpha_k, all L elements
+        // diff function in c++ computes the difference of elements of a vector
+        double hkm = sum( diff( exp(Lambda_matrix(k, _)) ) * diff(exp(Lambda_matrix(k, _))));
+        regterm2 += (etah - 1) * log(hkm) - nuh*hkm; // \sum_k^K (etah - 1) * log(hkm) - nuh*hkm;
+      }
+      
+      dL7 += sum(exp(Lambda_matrix(k, _))); // \sum_j^L \alpha_kj^m
+      dL8 += sum(Lambda_matrix(k, _));  //  \sum_j^L \lambda_kj^m
+    } // over K
+  }  // over M
+  dL7 *= -nu; //-nu* \sum_j^L \alpha_kj^m
+  dL8 *= (eta-1); // eta * \sum_j^L \lambda_kj^m SHOULD BE (eta-1)
+  return dSum - dL7 - dL8 - regterm2;
+  //
+  
+}
+
+
+
 
 /* Used when optimizing the shift and flip. What does this try to optimize???
  * shift_dist: the amount of shift (-120) dist.candidates(1)

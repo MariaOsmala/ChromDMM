@@ -9,6 +9,7 @@ dependencies:
   - r-ggplot2
   - r-reshape2
   - bioconductor-s4vectors
+  - bioconductor-biocgenerics
   - r-rcppgsl
   - r-devtools
   - bioconductor-genomeinfodb
@@ -17,7 +18,7 @@ dependencies:
   - r-e1071
   - r-ggally
   - gsl
-  - clang
+  - bioconductor-bsgenome.hsapiens.ucsc.hg19
   - r-gtools
   - r-cairo
   - r-rocr
@@ -25,8 +26,6 @@ dependencies:
   - r-dplyr
   - r-egg
   - r-gridextra
-  - r-grid
   - r-ggpubr
-
-
-
+  - r-gdata
+  - r-clues

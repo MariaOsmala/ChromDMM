@@ -279,7 +279,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
   #EM_lambda_optim_message=fit[[2]]@EM_lambda_optim_message
   #fit=fit[[2]]
   EM.iters<-which(sapply(EM_lambda_optim_message, length)!=0)
-  K=ncol(fit@fit$Estimate[[mi]])
+  K=ncol(fit@fit$Estimate[[1]])
   M=length(fit@Data)
   EM.nll.diagnostics<-data.frame()
   

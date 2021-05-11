@@ -21,52 +21,52 @@
 #'
 #' @examples
 #'
-#'
+#'#General-purpose optimization based on Nelder–Mead,
+#quasi-Newton and conjugate-gradient algorithms.
+#LambdaK: initial values for the parameters to be optimized over
+#fn=neg_log_evidence_lambda_pi A function to be minimized(default)/maximized,
+#the first argument of the function should be the vector of parameters over which
+#optimization is to take place
+
+#gr=neg_log_derive_evidence_lambda_pi: A function to return the gradient for the BFGS
+#There might be again an error with GAMMA_ITA vs (GAMMA_ITA -1),
+#* GAMMA_ITA_H seems to as expected
+#params,
+#method=method
+#control = list(maxit = MAX_GRAD_ITER, reltol = reltol)
+#reltol is Relative convergence tolerance. The algorithm stops if it is unable
+#to reduce the value by a factor of reltol * (abs(val) + reltol) at a step
+
+#Method "BFGS" is a quasi-Newton method (also known as a variable metric algorithm),
+#specifically that published simultaneously in 1970 by Broyden, Fletcher, Goldfarb and Shanno.
+#This uses function values and gradients to build up a picture of the surface to be optimized.
+#a necessary condition for optimality is that the gradient be zero. not guaranteed to converge
+#unless the function has a quadratic Taylor expansion near an optimum.
+#However, BFGS can have acceptable performance even for non-smooth optimization instances.
+#the Hessian matrix is approximated using updates specified by gradient evaluations (or approximate gradient evaluations)
+
+#Nocedal and Wright (1999) is a comprehensive reference for the previous three methods.
+#Nocedal, J. and Wright, S. J. (1999). Numerical Optimization. Springer.
+
+#neg_log_evidence_lambda_pi:  computes the value of the negative expected log posterior
+#i.e. lower bound to be optimized
+# i.e. the whole expected log posterior Q. Does not consider \pi.
+#Computes the value for one cluster k and datatype m. There might be errors(regularization term incorrect,
+#not all alpha terms included), check
 #'
 optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
                               etah, nuh, method='BFGS',
                               verbose=FALSE, MAX_GRAD_ITER=1000,
-                              reltol = 1e-12) {
+                              reltol = 1e-12, hessian=FALSE) {
 
   hkm_index <- vector(mode='integer', 1)
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
                  hkm=hkm, hkm_index=hkm_index)
-  #General-purpose optimization based on Nelder–Mead,
-  #quasi-Newton and conjugate-gradient algorithms.
-  #LambdaK: initial values for the parameters to be optimized over
-  #fn=neg_log_evidence_lambda_pi A function to be minimized(default)/maximized,
-  #the first argument of the function should be the vector of parameters over which
-  #optimization is to take place
-
-  #gr=neg_log_derive_evidence_lambda_pi: A function to return the gradient for the BFGS
-  #There might be again an error with GAMMA_ITA vs (GAMMA_ITA -1),
-  #* GAMMA_ITA_H seems to as expected
-  #params,
-  #method=method
-  #control = list(maxit = MAX_GRAD_ITER, reltol = reltol)
-  #reltol is Relative convergence tolerance. The algorithm stops if it is unable
-  #to reduce the value by a factor of reltol * (abs(val) + reltol) at a step
-
-  #Method "BFGS" is a quasi-Newton method (also known as a variable metric algorithm),
-  #specifically that published simultaneously in 1970 by Broyden, Fletcher, Goldfarb and Shanno.
-  #This uses function values and gradients to build up a picture of the surface to be optimized.
-  #a necessary condition for optimality is that the gradient be zero. not guaranteed to converge
-  #unless the function has a quadratic Taylor expansion near an optimum.
-  #However, BFGS can have acceptable performance even for non-smooth optimization instances.
-  #the Hessian matrix is approximated using updates specified by gradient evaluations (or approximate gradient evaluations)
-
-  #Nocedal and Wright (1999) is a comprehensive reference for the previous three methods.
-  #Nocedal, J. and Wright, S. J. (1999). Numerical Optimization. Springer.
-
-  #neg_log_evidence_lambda_pi:  computes the value of the negative expected log posterior
-  #i.e. lower bound to be optimized
-  # i.e. the whole expected log posterior Q. Does not consider \pi.
-  #Computes the value for one cluster k and datatype m. There might be errors(regularization term incorrect,
-  #not all alpha terms included), check
+  
   optim.result <- optim(LambdaK, fn=neg_log_evidence_lambda_pi,
                         gr=neg_log_derive_evidence_lambda_pi, params,
                         method=method, control = list(maxit = MAX_GRAD_ITER,
-                                                      reltol = reltol))
+                                                      reltol = reltol), hessian=hessian)
   #returns a list with components
   #par:The best set of parameters found.
   #value:The value of fn corresponding to par.
@@ -104,7 +104,7 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
 optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, eta, nu,
                                          etah, nuh, method='BFGS',
                                          verbose=FALSE, MAX_GRAD_ITER=1000,
-                                         reltol = 1e-12) {
+                                         reltol = 1e-12, hessian=FALSE) {
   
   hkm_index <- vector(mode='integer', 1)
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
@@ -113,7 +113,7 @@ optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, eta, nu,
   optim.result <- optim(LambdaK, fn=neg_log_evidence_lambda_pi_shift,
                         gr=neg_log_derive_evidence_lambda_pi_shift, params,
                         method=method, control = list(maxit = MAX_GRAD_ITER,
-                                                      reltol = reltol))
+                                                      reltol = reltol), hessian=hessian)
   
   
   if(optim.result$convergence != 0)
@@ -217,7 +217,7 @@ DMN.cluster <- function(count.data,
                         EM.maxit=250, EM.threshold=1e-6,
                         soft.kmeans.maxit=1000, soft.kmeans.stiffness=50,
                         randomInit=T,
-                        maxNumOptIter=1000, numOptRelTol=1e-12,...) {
+                        maxNumOptIter=1000, numOptRelTol=1e-12,init="random", ...) {
 
   if (seed != F) set.seed(seed)
 
@@ -308,43 +308,60 @@ DMN.cluster <- function(count.data,
   #mat N x 44
   #for each row, compute the sum
   #divide the values in each row by the sum
-
-  kmeans.binned.data <- mapply(function(mat, name){
-    t( apply(mat, 1, function(row) {
-      s<-sum(row);
-      if(s!=0) row/s else row}) )
-    }, binned.data, names(binned.data), SIMPLIFY=F)
-
-  #concatenate data for soft-kmeans
-  kmeans.binned.data <- do.call(cbind, kmeans.binned.data)
-  #K=2
-  kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
-  kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
-  #rowNorm=F, the rows were already normalized
-  kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose, #This is in dmn.cpp file
-                            randomInit=randomInit, centers=kmeanspp.centers,
-                            stiffness=soft.kmeans.stiffness, rowNorm=F)
-  #list of 3
-  #$centers
-  #$weights
-  #$labels K x N matrix
-  rm(kmeans.binned.data)
-
-  if(verbose) {
-   cat('k-means hard label frequencies:')
-   print(table(apply(kmeans.res$labels, 2, which.max)))
-  }
-
-
+  if(init=="kmeans++"){
+    kmeans.binned.data <- mapply(function(mat, name){
+      t( apply(mat, 1, function(row) {
+        s<-sum(row);
+        if(s!=0) row/s else row}) )
+      }, binned.data, names(binned.data), SIMPLIFY=F)
+  
+    #concatenate data for soft-kmeans
+    kmeans.binned.data <- do.call(cbind, kmeans.binned.data)
+    #K=2
+    kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
+    kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
+    #rowNorm=F, the rows were already normalized
+    kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose, #This is in dmn.cpp file
+                              randomInit=randomInit, centers=kmeanspp.centers,
+                              stiffness=soft.kmeans.stiffness, rowNorm=F)
+    #list of 3
+    #$centers
+    #$weights
+    #$labels K x N matrix
+    rm(kmeans.binned.data)
+  
+    if(verbose) {
+     cat('k-means hard label frequencies:')
+     print(table(apply(kmeans.res$labels, 2, which.max)))
+    }
+    alpha <- kmeans.res$centers #K x (M*S)
+    stopifnot(!is.na(alpha), !is.infinite(alpha))
     
-  alpha <- kmeans.res$centers #K x (M*S)
-  stopifnot(!is.na(alpha), !is.infinite(alpha))
-
-  #split centers given by soft kmeans, i.e. unconcatenate
-  col.ends <- cumsum(Lx)
-  col.starts <- col.ends - Lx + 1
-  alpha <- mapply(function(s,e)alpha[,s:e,drop=F], col.starts, col.ends, SIMPLIFY = F) #List of M
-
+    #split centers given by soft kmeans, i.e. unconcatenate
+    col.ends <- cumsum(Lx)
+    col.starts <- col.ends - Lx + 1
+    alpha <- mapply(function(s,e)alpha[,s:e,drop=F], col.starts, col.ends, SIMPLIFY = F) #List of M
+    #kmeans++ init
+  }
+  if(init=="random"){
+    means.ind=sample.int(N, size=K, replace=TRUE)
+    alpha <- list()
+    for(m in 1:M){
+      alpha[[ names(binned.data)[m] ]]=matrix(0, nrow=K, ncol=Lx[m])
+      for(k in 1:K){
+        alpha[[ names(binned.data)[m] ]][k,]=binned.data[[m]][means.ind[k],]/sum(binned.data[[m]][means.ind[k],])
+      }
+      colnames(alpha[[ names(binned.data)[m] ]]) <- paste0('bin', seq_len(Lx[m]))
+    }
+    kmeans.res <- list()
+    kmeans.res$labels=matrix(0, nrow=K, ncol=N)
+    for(k in 1:(K-1)){
+      kmeans.res$labels[k,]=sample( seq(0.1,0.9,0.1), N, replace=TRUE)
+    }
+    kmeans.res$labels[K,]=1-colSums(kmeans.res$labels)
+    colnames(kmeans.res$labels) <- paste0('loc', seq_len(N))
+  }
+  
   if(shift.reads==TRUE && flip==TRUE){
     
   }else if(shift.reads==TRUE && flip==FALSE){ #only shift
