@@ -274,22 +274,25 @@ plot.clusters <- function(data, labels, ..., fun = mean, rotatex = T,
 # 
 # }
 
-plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=1) {
+plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=1, plot.det=TRUE) {
   
   #EM_lambda_optim_message=fit[[2]]@EM_lambda_optim_message
   #fit=fit[[2]]
-  EM.iters<-which(sapply(EM_lambda_optim_message, length)!=0)
+  EM.iters<-which(sapply(EM_lambda_optim_message, length)!=0)-1
   K=ncol(fit@fit$Estimate[[1]])
   M=length(fit@Data)
   EM.nll.diagnostics<-data.frame()
   
   for(mi in 1:M){
     for(ki in 1:K){
-      for(iter in (1+skip):EM.iters[length(EM.iters)]){
+      for(iter in (0+skip):EM.iters[length(EM.iters)]){
         nll.diag<-data.frame(Datatype=names(fit@Data)[mi],
                              Component=ki,
                              EM.iter=iter,
-                             nll=EM_lambda_optim_message[[iter]][[mi]][[ki]]$value)
+                             nll=EM_lambda_optim_message[[iter+1]][[mi]][[ki]]$value)
+        if(plot.det==TRUE){
+          nll.diag$detHes=det(EM_lambda_optim_message[[iter+1]][[mi]][[ki]]$hessian)
+        }
         EM.nll.diagnostics <- rbind(EM.nll.diagnostics, nll.diag)
       }
       
@@ -313,7 +316,19 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     scale_color_continuous('EM iterations') +
     theme_minimal()
   
-  
+  if(plot.det==TRUE){
+  detHes.plot <- ggplot(EM.nll.diagnostics,
+                        aes(EM.iter, detHes, )) +
+    geom_line(aes(group=Datatype)) +
+    geom_point(shape=1) +
+    facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
+    labs(title='EM iterations vs. BFGS Hessian determinant', x='EM iterations', 
+         y="Hessian determinant" ) +
+    #     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
+    #     scale_color_brewer(palette='Blues') +
+    scale_color_continuous('EM iterations') +
+    theme_minimal()
+  }
   
   
   EM.diagnostics <- fit@EM.diagnostics
@@ -332,7 +347,16 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     scale_color_continuous('EM iterations') +
     theme_minimal()
   
-  
+  gradient.plot <- ggplot(EM.diagnostics,
+                          aes(seq_along(gradient), gradient, color=EM.iter)) +
+    geom_line(aes(group=Datatype)) +
+    geom_point(shape=1) +
+    facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
+    labs(title='Numerical optimization iterations vs. gradient norm', x='Numerical optimization iterations', y="gradient norm") +
+    #     scale_color_gradientn('EM iterations', colours=RColorBrewer::brewer.pal(n=9, name='YlOrRd'))
+    #     scale_color_brewer(palette='Blues') +
+    scale_color_continuous('EM iterations') +
+    theme_minimal()
   
   
   
@@ -348,11 +372,24 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
   
   #create a grid layout and print ggplots on it
   grid.newpage()
-  pushViewport(viewport(layout = grid.layout(3, 1)))
-  vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
-  print(hkm.plot, vp = vplayout(1, 1))
-  print(nll.plot, vp = vplayout(2, 1))
-  print(nop, vp = vplayout(3, 1))
+  if(plot.det==TRUE){
+    pushViewport(viewport(layout = grid.layout(5, 1)))
+    vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+    print(hkm.plot, vp = vplayout(1, 1))
+    print(gradient.plot, vp = vplayout(2, 1))
+    print(detHes.plot, vp = vplayout(3, 1))
+    print(nll.plot, vp = vplayout(4, 1))
+    print(nop, vp = vplayout(5, 1))
+  }else{
+    pushViewport(viewport(layout = grid.layout(4, 1)))
+    vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+    print(hkm.plot, vp = vplayout(1, 1))
+    print(gradient.plot, vp = vplayout(2, 1))
+    print(nll.plot, vp = vplayout(3, 1))
+    print(nop, vp = vplayout(4, 1))
+  }
+  
+  
   
 }
 

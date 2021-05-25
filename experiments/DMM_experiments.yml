@@ -29,3 +29,4 @@ dependencies:
   - r-ggpubr
   - r-gdata
   - r-clues
+  - r-ggridges 

@@ -54,17 +54,25 @@
 #Computes the value for one cluster k and datatype m. There might be errors(regularization term incorrect,
 #not all alpha terms included), check
 #'
-optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
+optimise_lambda_k <- function(LambdaK, data, Z, hkm, gradient, lb, lambda_iter, eta, nu,
                               etah, nuh, method='BFGS',
                               verbose=FALSE, MAX_GRAD_ITER=1000,
                               reltol = 1e-12, hessian=FALSE) {
 
+  
   hkm_index <- vector(mode='integer', 1)
+  gradient_index <- vector(mode='integer', 1)
+  lb_index <- vector(mode='integer', 1)
+  lambda_index <- vector(mode='integer', 1)
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                 hkm=hkm, hkm_index=hkm_index)
+                 hkm=hkm, gradient=gradient, lb=lb,hkm_index=hkm_index,gradient_index=gradient_index,
+                 lb_index= lb_index, lambda_index=lambda_index)
+  #hkm_index <- vector(mode='integer', 1)
+  #params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
+  #               hkm=hkm, hkm_index=hkm_index)
   
   optim.result <- optim(LambdaK, fn=neg_log_evidence_lambda_pi,
-                        gr=neg_log_derive_evidence_lambda_pi, params,
+                        gr=neg_log_derive_evidence_lambda_pi, lambda_iter,params,
                         method=method, control = list(maxit = MAX_GRAD_ITER,
                                                       reltol = reltol), hessian=hessian)
   #returns a list with components
@@ -101,20 +109,25 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, eta, nu,
 #'
 #'
 #'
-optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, eta, nu,
+optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, gradient, lb, lambda_iter, eta, nu,
                                          etah, nuh, method='BFGS',
                                          verbose=FALSE, MAX_GRAD_ITER=1000,
                                          reltol = 1e-12, hessian=FALSE) {
   
+  gradient_index <- vector(mode='integer', 1)
+  lb_index <- vector(mode='integer', 1)
   hkm_index <- vector(mode='integer', 1)
+  lambda_index <- vector(mode='integer', 1)
+  
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                 hkm=hkm, hkm_index=hkm_index)
+                 hkm=hkm, gradient=gradient, lb=lb,hkm_index=hkm_index,gradient_index=gradient_index,
+                 lb_index= lb_index, lambda_index=lambda_index)
   
   optim.result <- optim(LambdaK, fn=neg_log_evidence_lambda_pi_shift,
-                        gr=neg_log_derive_evidence_lambda_pi_shift, params,
+                        gr=neg_log_derive_evidence_lambda_pi_shift, lambda_iter, params,
                         method=method, control = list(maxit = MAX_GRAD_ITER,
                                                       reltol = reltol), hessian=hessian)
-  
+
   
   if(optim.result$convergence != 0)
     warning('!!!!! Numerical Optimization did not converge !!!!!!!\n')
@@ -195,7 +208,7 @@ optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, eta, nu,
 #' @param maxNumOptIter default 1000
 #' @param numOptRelTol default 1e-12
 #' @param parallel default true
-#'
+#' @param method default BFGS, option gradient.descent
 #' @return
 #' @export
 #'
@@ -217,7 +230,7 @@ DMN.cluster <- function(count.data,
                         EM.maxit=250, EM.threshold=1e-6,
                         soft.kmeans.maxit=1000, soft.kmeans.stiffness=50,
                         randomInit=T,
-                        maxNumOptIter=1000, numOptRelTol=1e-12,init="random", ...) {
+                        maxNumOptIter=1000, numOptRelTol=1e-12,init="random", method="BFGS", hessian=FALSE,..., learning.rate=1e-3) {
 
   if (seed != F) set.seed(seed)
 
@@ -315,11 +328,13 @@ DMN.cluster <- function(count.data,
         if(s!=0) row/s else row}) )
       }, binned.data, names(binned.data), SIMPLIFY=F)
   
+    
     #concatenate data for soft-kmeans
     kmeans.binned.data <- do.call(cbind, kmeans.binned.data)
     #K=2
     kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
     kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
+    
     #rowNorm=F, the rows were already normalized
     kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose, #This is in dmn.cpp file
                               randomInit=randomInit, centers=kmeanspp.centers,
@@ -341,6 +356,7 @@ DMN.cluster <- function(count.data,
     col.ends <- cumsum(Lx)
     col.starts <- col.ends - Lx + 1
     alpha <- mapply(function(s,e)alpha[,s:e,drop=F], col.starts, col.ends, SIMPLIFY = F) #List of M
+  
     #kmeans++ init
   }
   if(init=="random"){
@@ -353,6 +369,9 @@ DMN.cluster <- function(count.data,
       }
       colnames(alpha[[ names(binned.data)[m] ]]) <- paste0('bin', seq_len(Lx[m]))
     }
+    
+    
+    
     kmeans.res <- list()
     kmeans.res$labels=matrix(0, nrow=K, ncol=N)
     for(k in 1:(K-1)){
@@ -369,13 +388,21 @@ DMN.cluster <- function(count.data,
                               M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                               maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
                               eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                              EM.maxit=EM.maxit, EM.threshold=EM.threshold)
+                              EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, hessian=hessian)
   }else if(shift.reads==FALSE && flip==TRUE){ #only flip
     
   }else{ # shift.reads==FALSE && flip==FALSE
-    result = dmn.em(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
+    if(method=="BFGS"){
+        result = dmn.em(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                     maxNumOptIter=maxNumOptIter, binned.data=binned.data, eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                    EM.maxit=EM.maxit, EM.threshold=EM.threshold)
+                    EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, hessian=hessian)
+    }
+    if(method=="gradient.descent"){
+      result = dmn.em.gradient.descent(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
+                      maxNumOptIter=maxNumOptIter, binned.data=binned.data, eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
+                      EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, learning.rate=learning.rate)
+    }
+    
   }
 
   

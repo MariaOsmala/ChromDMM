@@ -367,10 +367,13 @@
  */
 
 // [[Rcpp::export]]
-double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List lparams)
+double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List& lambda_iter, Rcpp::List lparams)
 {
   
   int i, s, j;
+  Rcpp::NumericVector lambda_temp=clone(lambda);
+  
+  // Rprintf( "lambda[0] %i\n", lambda.size());
   
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L_x
   Rcpp::NumericMatrix adPi = as<Rcpp::NumericMatrix>(lparams["pi"]); //S x N
@@ -380,6 +383,25 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List l
   double GAMMA_ITA_H = as<double>(lparams["etah"]);
   double GAMMA_NU_H = as<double>(lparams["nuh"]);
   
+  Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
+  
+  
+   // Rprintf( "lambda_index: %i, lambda_iter.length: %i\n",
+   //         lambda_index[0], lambda_iter.size());
+  
+   if (lambda_index[0] < lambda_iter.size()) {
+     lambda_iter[lambda_index[0]]=clone(lambda_temp);
+   }
+   else{
+     Rprintf("lambda_index exceeds lambda_iter vector length!!! lambda_index: %i, lambda_iter.length: %i\n",
+               lambda_index[0], lambda_iter.size());
+   }
+  lambda_index[0] += 1;
+  // 
+  
+  // Rcpp::List hkm = as<Rcpp::List>(lparams["hkm"]);
+  // Rcpp::IntegerVector hkm_index = as<Rcpp::IntegerVector>(lparams["hkm_index"]);
+  // 
   const int Lx = aanX.ncol(); // L_x
   const int N = aanX.nrow();
   const int S = adPi.nrow();
@@ -394,7 +416,7 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List l
 
  
   Rcpp::NumericVector dWeight(S);
-  Rcpp::NumericVector dAlpha(lambda.length());
+  Rcpp::NumericVector dAlpha(La);
 
   Rcpp::NumericMatrix adSumAlphaN(S,N);
   Rcpp::NumericVector dSumAlpha_s(S);
@@ -439,7 +461,7 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List l
         const double lngammaAlphaN_1 = dN ? gsl_sf_lngamma(dAlphaN_1) : lngammaAlpha0_1; //if dN exists or is non-zero, compute lnGamma(dAlphaN), else compute lnGamma(DaLpha)
        
         adSumAlphaN[s,i] += dAlphaN_1; // \sum_{j}^Lx \alpha_{j}+x_{ij}
-        dLogE -= adPi[s,i] * lngammaAlphaN_1; // -\sum_i \sum_s E[z_isf] *\sum_j lngamma(x_{ij}+alpha_j), 
+        dLogE -= adPi[s,i] * lngammaAlphaN_1; //dLogE_1 -\sum_i \sum_s E[z_isf] *\sum_j lngamma(x_{ij}+alpha_j), 
         
       } //i
     } //j
@@ -452,7 +474,7 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List l
   
   for(i = 0; i < N; i++){
     for(s = 0; s < S; s++){
-      dLogE += adPi[s,i] * gsl_sf_lngamma(adSumAlphaN[s,i]); // \sum_{n=1}^N E[z_i]* lngamma( \sum_j(x_ij+alpha_j) )
+      dLogE += adPi[s,i] * gsl_sf_lngamma(adSumAlphaN[s,i]); //dLogE_2 \sum_{n=1}^N E[z_i]* lngamma( \sum_j(x_ij+alpha_j) )
     }
   }
   
@@ -462,17 +484,40 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List l
     reg_term = 0.0;
   } else {
     double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
+    
+    // if (hkm_index[0] < hkm.size()) {
+    //   hkm[hkm_index[0]] = hk;
+    // }
+    // else{
+    //   Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
+    //           hkm_index[0], hkm.size());
+    // }
+    // hkm_index[0] += 1;
+    
     reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
   }
   
   //should it be (GAMMA_ITA-1)*dSumLambda???
-  double returnVal = dLogE + dLogEAlpha_final + 
-    GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term;
-  //Rcpp::Rcout  << returnVal <<"\n";
-  Rprintf("LB value: %f\n", returnVal);
-  
-  return dLogE + dLogEAlpha_final + // complete data likelihood term
+  double returnVal = dLogE + dLogEAlpha_final + // complete data likelihood term
     GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term; //prior term
+  // Rcpp::Rcout  << returnVal <<"\n";
+  // Rprintf("LB value: %f\n", returnVal);
+  
+  // if (lb_index[0] < lb.size()) {
+  //   lb[lb_index[0]] = returnVal;
+  // }
+  // else{
+  //   Rprintf("lb_index exceeds lb vector length!!! lb_index: %i, lb.length: %i\n",
+  //           lb_index[0], lb.size());
+  // }
+  // lb_index[0] += 1;
+  
+  return returnVal; 
+  
+  
+  
+  
+  
 }
 
 
@@ -484,8 +529,8 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List l
 
 // [[Rcpp::export]]
 Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector ptLambda,
-                                                                 Rcpp::List lparams)
-{
+                                                            Rcpp::List& lambda_iter,
+                                                                 Rcpp::List lparams){
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x Lx
   Rcpp::NumericMatrix adPi = as<Rcpp::NumericMatrix>(lparams["pi"]); // S x N
   double GAMMA_ITA = as<double>(lparams["eta"]);
@@ -494,6 +539,9 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
   double GAMMA_NU_H = as<double>(lparams["nuh"]);
   Rcpp::List hkm = as<List>(lparams["hkm"]);
   Rcpp::IntegerVector hkm_index = as<Rcpp::IntegerVector>(lparams["hkm_index"]);
+  
+  Rcpp::List gradient = as<Rcpp::List>(lparams["gradient"]);
+  Rcpp::IntegerVector gradient_index = as<Rcpp::IntegerVector>(lparams["gradient_index"]);
   
   int i, j, s, k; // k is j'
   
@@ -539,7 +587,7 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
               // Rcpp::Rcout << "s: " << s <<" ";
             //}
             dWeight_j[j] += adPi[s,i];
-          }
+          } //if
         } //s
       } //i
     // Rcpp::Rcout  <<"\n";
@@ -637,7 +685,16 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
     gnorm += pow(g[j], 2.0);
   }
   gnorm=sqrt(gnorm);
-  Rprintf("Gradient norm: %f\n", gnorm);
+  // Rprintf("Gradient norm: %f\n", gnorm);
+  
+  if (gradient_index[0] < gradient.size()) {
+    gradient[gradient_index[0]] = gnorm;
+  }
+  else{
+    Rprintf("gradient_index exceeds gradient vector length!!! gradient_index: %i, gradient.length: %i\n",
+            gradient_index[0], gradient.size());
+  }
+  gradient_index[0] += 1;
   
   return g;
 }

@@ -3,11 +3,14 @@ setClass("DMN",
                                   group="matrix",
                                   mixture="list",
                                   fit="list",
+                                  Ez="array",
                                   EM.diagnostics="data.frame",
                                   Data="list",
                                   nll.data="data.frame",
                                   nLB.data="data.frame",
-                                  EM_lambda_optim_message="list"))
+                                  EM_lambda_optim_message="list",
+                                  EM_alpha_list="list",
+                                  Ez_list="list"))
 
 .DMN <-
     function(goodnessOfFit, group, mixture, fit, ...)
@@ -73,7 +76,7 @@ dmn <-
              repetition=4,
              maxNumOptIter=1000,
              numOptRelTol=1e-12,
-             parallel=T, init="random")
+             parallel=T, init="random", method="BFGS", hessian=FALSE, learning.rate=1e-3)
 {
     if (is.matrix(count)) count <- list(Data=count)
     stopifnot(is.list(count))
@@ -109,7 +112,8 @@ dmn <-
                          soft.kmeans.stiffness=soft.kmeans.stiffness,
                          randomInit=randomInit,
                          maxNumOptIter=maxNumOptIter,
-                         numOptRelTol=numOptRelTol, init=init)
+                         numOptRelTol=numOptRelTol, init=init, method=method, hessian=hessian,
+                         learning.rate=learning.rate)
       o <- order(ans$Mixture$Weight, decreasing=TRUE)
       ans <- within(ans, {
           Group <- Group[,o, drop=FALSE]
@@ -119,7 +123,10 @@ dmn <-
           Data <- Data
           nll.data <- nll.data
           nLB.data <- nLB.data
+          Ez <- Ez
           EM_lambda_optim_message <- EM_lambda_optim_message
+          EM_alpha_list <- EM_alpha_list
+          Ez_list <- Ez_list
       })
       with(ans, .DMN(goodnessOfFit=GoodnessOfFit,
                      group=Group,
@@ -129,7 +136,10 @@ dmn <-
                      Data=Data,
                      nll.data=nll.data,
                      nLB.data=nLB.data,
-                     EM_lambda_optim_message=EM_lambda_optim_message))
+                     Ez=Ez,
+                     EM_lambda_optim_message=EM_lambda_optim_message,
+                     EM_alpha_list=EM_alpha_list,
+                     Ez_list=Ez_list))
     } #repet.func ends
 
     if (length(K) == 1) {

@@ -216,7 +216,7 @@ Rcpp::List soft_kmeans(Rcpp::NumericMatrix data,
  */
 
 // [[Rcpp::export]]
-double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List lparams)
+double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda_iter, Rcpp::List lparams)
 {
     int i, j;
 
@@ -226,34 +226,57 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List lparams
     double GAMMA_NU = as<double>(lparams["nu"]);
     double GAMMA_ITA_H = as<double>(lparams["etah"]);
     double GAMMA_NU_H = as<double>(lparams["nuh"]);
+    
+    Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
+    Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
+    
+    // Rcpp::List hkm = as<Rcpp::List>(lparams["hkm"]);
+    // Rcpp::IntegerVector hkm_index = as<Rcpp::IntegerVector>(lparams["hkm_index"]);
+    // 
+    
+    
+    Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
+    
+    
+    // Rprintf( "lambda_index: %i, lambda_iter.length: %i\n",
+    //         lambda_index[0], lambda_iter.size());
+    
+    if (lambda_index[0] < lambda_iter.size()) {
+      lambda_iter[lambda_index[0]]=clone(lambda);
+    }
+    else{
+      Rprintf("lambda_index exceeds lambda_iter vector length!!! lambda_index: %i, lambda_iter.length: %i\n",
+              lambda_index[0], lambda_iter.size());
+    }
+    lambda_index[0] += 1;
 
-    const int S = aanX.ncol(); // L_x
+    const int L = aanX.ncol(); // L_x
     const int N = aanX.nrow();
     
-    /*dLogE collects the terms \sum_{n=1}^N \sum_{j=1}^S E[z_i] \log \gamma (x_ij+ alpha_j)
+    /*dLogE collects the terms \sum_{n=1}^N \sum_{j=1}^L E[z_i] \log \gamma (x_ij+ alpha_j)
     and \sum_{n=1}^N E[z_i]* lng( \sum_j(x_ij+alpha-j) )*/
     double dLogE = 0.0;
     
-    double dLogEAlpha = 0.0; // \log \gamma ( \sum_{j=1}^S  \alpha_{j} )
-    double dSumAlpha = 0.0; // sum of alpha \sum_{j=1}^S \alpha_{j}
+    double dLogEAlpha = 0.0; // \log \gamma ( \sum_{j=1}^L  \alpha_{j} )
+    double dSumAlpha = 0.0; // sum of alpha \sum_{j=1}^L \alpha_{j}
     double dSumLambda = 0.0; // sum of lambda?
     double dHk = 0.0;
     double dWeight = 0.0; // \sum_{n=1}^N E(z_i)
 
-    Rcpp::NumericVector adSumAlphaN(N); // \sum_{j}^S \alpha_{j}+x_{ij}
+    Rcpp::NumericVector adSumAlphaN(N); // \sum_{j}^L \alpha_{j}+x_{ij}
 
     for (i = 0; i < N; i++) {
         adSumAlphaN[i] = 0.0;
         dWeight += adPi[i]; //sum over z_i
     }
 
-    for (j = 0; j < S; j++) {
+    for (j = 0; j < L; j++) {
         const double dLambda = lambda[j];
         const double dAlpha = exp(dLambda);
         /* compute the logarithm of the Gamma function,
         dAlpha can not be zero or negative.
         Function computed using the real Lanczos method */
-        dLogEAlpha += gsl_sf_lngamma(dAlpha); // \sum_{j=1}^S \log \gamma (\alpha_{j} )
+        dLogEAlpha += gsl_sf_lngamma(dAlpha); //dLogEAlpha_1 \sum_{j=1}^L \log \gamma (\alpha_{j} )
         dSumLambda += dLambda;
         dSumAlpha += dAlpha;
         const double lngammaAlpha0 = gsl_sf_lngamma(dAlpha); //lngamma of \alpha_{j}
@@ -261,14 +284,14 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List lparams
             const double dN = aanX(i, j); // x_{ij}
             const double dAlphaN = dAlpha + dN; // \alpha_{j}+x_{ij}
             const double lngammaAlphaN = dN ? gsl_sf_lngamma(dAlphaN) : lngammaAlpha0; //if dN exists or is non-zero, compute lnGamma(dAlphaN), else compute lnGamma(DaLpha)
-            adSumAlphaN[i] += dAlphaN; // \sum_{j}^S \alpha_{j}+x_{ij} , weight by pi
-            dLogE -= adPi[i] * lngammaAlphaN; //weight by pi, -\sum_i E[z_i] *\sum_j lngamma(x_{ij}+alpha_j)
+            adSumAlphaN[i] += dAlphaN; // \sum_{j}^L \alpha_{j}+x_{ij} , weight by pi
+            dLogE -= adPi[i] * lngammaAlphaN; //dlogE_1 weight by pi, -\sum_i E[z_i] *\sum_j lngamma(x_{ij}+alpha_j)
         }
     }
-    dLogEAlpha -= gsl_sf_lngamma(dSumAlpha);// \sum_{j=1}^S \log \gamma (\alpha_{j} ) -\log \gamma ( \sum_{j=1}^S  \alpha_{j} )
+    dLogEAlpha -= gsl_sf_lngamma(dSumAlpha);// dLogEAlpha_2 \sum_{j=1}^L \log \gamma (\alpha_{j} ) -\log \gamma ( \sum_{j=1}^L  \alpha_{j} )
 
     for(i = 0; i < N; i++)
-        dLogE += adPi[i] * gsl_sf_lngamma(adSumAlphaN[i]); // \sum_{n=1}^N E[z_i]* lngamma( \sum_j(x_ij+alpha_j) )
+        dLogE += adPi[i] * gsl_sf_lngamma(adSumAlphaN[i]); //dLogE_2 \sum_{n=1}^N E[z_i]* lngamma( \sum_j(x_ij+alpha_j) )
 
     double reg_term;
 
@@ -276,17 +299,40 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List lparams
       reg_term = 0.0;
     } else {
       double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
+      
+      // if (hkm_index[0] < hkm.size()) {
+      //   hkm[hkm_index[0]] = hk;
+      // }
+      // else{
+      //   Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
+      //           hkm_index[0], hkm.size());
+      // }
+      // hkm_index[0] += 1;
+      // 
+      
       reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
     }
 
-
+    double retVal = dLogE + dWeight*dLogEAlpha + // complete data likelihood term
+      GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term;//prior term, ITA corrected to ITA-1 !!!
 
     //should it be (GAMMA_ITA-1)*dSumLambda???
-    Rprintf("LB value: %f\n", dLogE + dWeight*dLogEAlpha + 
-      GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term);
+    // Rprintf("LB value: %f\n", retVal);
     
-    return dLogE + dWeight*dLogEAlpha + // complete data likelihood term
-      GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term; //prior term, ITA corrected to ITA-1 !!!
+
+    
+    if (lb_index[0] < lb.size()) {
+      lb[lb_index[0]] = retVal;
+    }
+    else{
+      Rprintf("lb_index exceeds lb vector length!!! lb_index: %i, lb.length: %i\n",
+              lb_index[0], lb.size());
+    }
+    lb_index[0] += 1;
+    
+    
+    return retVal; 
+
 }
 
 /* A function to return the gradient for the BFGS, derivative of the 
@@ -297,10 +343,10 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List lparams
  */
 
 // [[Rcpp::export]]
-Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLambda,
+Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLambda,Rcpp::List& lambda_iter,
                                                       Rcpp::List lparams)
 {
-    Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x S
+    Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L
     Rcpp::NumericVector adPi = as<Rcpp::NumericVector>(lparams["pi"]); // N
     double GAMMA_ITA = as<double>(lparams["eta"]);
     double GAMMA_NU = as<double>(lparams["nu"]);
@@ -308,41 +354,46 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
     double GAMMA_NU_H = as<double>(lparams["nuh"]);
     Rcpp::List hkm = as<Rcpp::List>(lparams["hkm"]);
     Rcpp::IntegerVector hkm_index = as<Rcpp::IntegerVector>(lparams["hkm_index"]);
+    
+    Rcpp::List gradient = as<Rcpp::List>(lparams["gradient"]);
+    Rcpp::IntegerVector gradient_index = as<Rcpp::IntegerVector>(lparams["gradient_index"]);
 
     int i, j;
-    const int S = aanX.ncol(), N = aanX.nrow();
+    const int L = aanX.ncol();
+    const int N = aanX.nrow();
 
-    Rcpp::NumericVector g(S);
-    Rcpp::NumericVector adDeriv(S); //derivative for each j
-    Rcpp::NumericVector adStore(N); // \sum_j^S x_ij + \sum_j^S \alpha_j
-    Rcpp::NumericVector adAlpha(S);
-    double dSumStore = 0.0; // \sum_n^N E[z_i]* psi( \sum_j^S x_ij + \sum_j^S \alpha_j )
+    Rcpp::NumericVector g(L);
+    Rcpp::NumericVector adDeriv(L); //derivative for each j
+    Rcpp::NumericVector adStore(N); // \sum_j^L x_ij + \sum_j^L \alpha_j
+    Rcpp::NumericVector adAlpha(L);
+    double dSumStore = 0.0; // \sum_n^N E[z_i]* psi( \sum_j^L x_ij + \sum_j^L \alpha_j )
     double dStore = 0.0; // sum of alpha over j
-    double dWeight = 0; // sum of z_i over i/N
+    double dWeight = 0.0; // sum of z_i over i/N
 
     for (i = 0; i < N; i++) {  
         adStore[i] = 0.0;
         dWeight += adPi[i];
     }
 
-    for (j = 0; j < S; j++) {
+    for (j = 0; j < L; j++) {
         adAlpha[j] = exp(ptLambda[j]);
         dStore += adAlpha[j];
-        adDeriv[j] = dWeight* gsl_sf_psi(adAlpha[j]);
+        adDeriv[j] = dWeight* gsl_sf_psi(adAlpha[j]); //adDeriv_1[j]
         double alphaS0 = gsl_sf_psi(adAlpha[j]);
         for (i = 0; i < N; i++) {
             int dN = aanX(i, j);
             double dAlphaN = adAlpha[j] + dN;
 
             double psiAlphaN = dN ? gsl_sf_psi(dAlphaN) : alphaS0;
-            adDeriv[j] -= adPi[i]*psiAlphaN;
+            adDeriv[j] -= adPi[i]*psiAlphaN; //adDeriv_2[j]
             //            adDeriv[j] -= adPi[i]*gsl_sf_psi (dAlphaN);
-            adStore[i] += dAlphaN; //  \sum_j^S x_ij + \sum_j^S \alpha_j
+            adStore[i] += dAlphaN; //  \sum_j^L x_ij + \sum_j^L \alpha_j
         }
     }
 
-    for (i = 0; i < N; i++)
+    for (i = 0; i < N; i++){
         dSumStore += adPi[i] * gsl_sf_psi(adStore[i]);
+    }
     dStore = dWeight * gsl_sf_psi(dStore); //dStore_2
 
     double hk = REG_H_LAMBDA(ptLambda);
@@ -356,7 +407,7 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
     }
     hkm_index[0] += 1;
 
-    for (j = 0; j < S; j++) {
+    for (j = 0; j < L; j++) {
 
         double reg_term;
 
@@ -375,12 +426,23 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
     
     double gnorm=0.0;
     
-    for (j = 0; j < S; j++) {
+    for (j = 0; j < L; j++) {
       gnorm += pow(g[j], 2.0);
     }
     gnorm=sqrt(gnorm);
     
-    Rprintf("Gradient norm: %f\n", gnorm);
+    //Rprintf("Gradient norm: %f\n", gnorm);
+    
+    if (gradient_index[0] < gradient.size()) {
+      gradient[gradient_index[0]] = gnorm;
+    }
+    else{
+      Rprintf("gradient_index exceeds gradient vector length!!! gradient_index: %i, gradient.length: %i\n",
+              gradient_index[0], gradient.size());
+    }
+    gradient_index[0] += 1;
+    
+    
   return g;
 }
 

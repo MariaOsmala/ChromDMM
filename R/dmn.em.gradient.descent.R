@@ -1,6 +1,6 @@
-dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose, 
+dmn.em.gradient.descent <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose, 
                    maxNumOptIter, binned.data, eta, nu, etah, nuh, numOptRelTol, 
-                   EM.maxit, EM.threshold, method="BFGS", hessian=hessian) {
+                   EM.maxit, EM.threshold, learning.rate=1e-3, method) {
   
   
   Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
@@ -41,7 +41,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
       lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
       #the lambda_{kj}^{(m)} can be optimized for each k and m separately
       
-     optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
+     optim.result <- gradientDescent(LambdaK=lambda[[m]][k,],
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
@@ -54,7 +54,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian,method=method)
+                                          reltol=numOptRelTol, learning.rate=learning.rate)
       
      alpha_list[[m]][[k]] =exp( do.call(rbind,lambda_iter))
      hkm <- unlist(hkm)
@@ -62,7 +62,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
      hkm <- data.frame(Datatype=names(binned.data)[m],
                        Component=k,
                        EM.iter=0,
-                       hkm=hkm, gradient=gradient, nll=optim.result$value, detH=det(optim.result$hessian))
+                       hkm=hkm, gradient=gradient, nll=optim.result$value)
      EM.diagnostics <- rbind(EM.diagnostics, hkm)
    
       lambda[[m]][k,] <-optim.result$par
@@ -159,7 +159,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
         gradient <- vector(mode = 'list', maxNumOptIter+1)
         lb <- vector(mode = 'list', maxNumOptIter+1)
         lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
-        optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
+        optim.result <- gradientDescent(LambdaK=lambda[[m]][k,],
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
@@ -171,7 +171,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian, method=method)
+                                          reltol=numOptRelTol, learning.rate=learning.rate)
         
         alpha_list[[m]][[k]]=exp( do.call(rbind,lambda_iter))
         lambda[[m]][k,] <-optim.result$par
@@ -184,7 +184,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
         hkm <- data.frame(Datatype=names(binned.data)[m],
                           Component=k,
                           EM.iter=iter+1,
-                          hkm=hkm,gradient=gradient, nll=optim.result$value, detH=det(optim.result$hessian))
+                          hkm=hkm,gradient=gradient, nll=optim.result$value)
         EM.diagnostics <- rbind(EM.diagnostics, hkm)
       }
     }
