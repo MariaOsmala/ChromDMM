@@ -274,7 +274,7 @@ plot.clusters <- function(data, labels, ..., fun = mean, rotatex = T,
 # 
 # }
 
-plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=1, plot.det=TRUE) {
+plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=1, plot.det=TRUE, plot.gradient=TRUE) {
   
   #EM_lambda_optim_message=fit[[2]]@EM_lambda_optim_message
   #fit=fit[[2]]
@@ -347,6 +347,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     scale_color_continuous('EM iterations') +
     theme_minimal()
   
+  if(plot.gradient==TRUE){
   gradient.plot <- ggplot(EM.diagnostics,
                           aes(seq_along(gradient), gradient, color=EM.iter)) +
     geom_line(aes(group=Datatype)) +
@@ -358,7 +359,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     scale_color_continuous('EM iterations') +
     theme_minimal()
   
-  
+  }
   
   #plot number of num.opt. iterations
   nop <- ggplot(EM.diagnostics, aes(EM.iter, NO.iter.count)) +
@@ -372,7 +373,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
   
   #create a grid layout and print ggplots on it
   grid.newpage()
-  if(plot.det==TRUE){
+  if(plot.det==TRUE && plot.gradient==TRUE){
     pushViewport(viewport(layout = grid.layout(5, 1)))
     vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
     print(hkm.plot, vp = vplayout(1, 1))
@@ -380,7 +381,16 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     print(detHes.plot, vp = vplayout(3, 1))
     print(nll.plot, vp = vplayout(4, 1))
     print(nop, vp = vplayout(5, 1))
-  }else{
+  }
+  if(plot.det==FALSE && plot.gradient==FALSE){
+    pushViewport(viewport(layout = grid.layout(3, 1)))
+    vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
+    print(hkm.plot, vp = vplayout(1, 1))
+    print(nll.plot, vp = vplayout(2, 1))
+    print(nop, vp = vplayout(3, 1))
+    }
+  
+  if(plot.det==FALSE && plot.gradient==TRUE){
     pushViewport(viewport(layout = grid.layout(4, 1)))
     vplayout <- function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
     print(hkm.plot, vp = vplayout(1, 1))

@@ -1,6 +1,6 @@
-dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N, verbose, 
+dmn.em.shift.gradient.descent <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N, verbose, 
                    maxNumOptIter, binned.data, eta, nu, etah, nuh, numOptRelTol, 
-                   EM.maxit, EM.threshold, method="BFGS", hessian=FALSE, optim.options=NULL ) {
+                   EM.maxit, EM.threshold, learning.rate=1e-3, method ) {
   
   #options(digits=-log10(numOptRelTol))
   Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
@@ -43,7 +43,6 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   for(i in 1:N){
     for(k in 1:K){
       Ez2[k,,i]=xi*Ez[k,i]
-      Ez2[k,,i]=Ez2[k,,i]/sum(Ez2[k,,i])
     }
   }
   Ez=Ez2
@@ -51,10 +50,8 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   Ez_list=list()
   Ez_list[[1]]=data.table::copy(Ez)
 
-  print(paste0("Ez_list_length: ",length(Ez_list) ))
-  print(paste0("Ez_list[[1]]: ",str(Ez_list[[1]]) ))
   
-  print(tracemem(Ez_list[[1]])==tracemem(Ez))
+  #print(tracemem(Ez_list[[1]])==tracemem(Ez))
   
   
   #lambda is log(alpha)
@@ -88,14 +85,14 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     
       if (verbose)
         setTxtProgressBar(pb, (m-1)*K+k)
-      hkm <- vector(mode = 'list', maxNumOptIter+1) #comes from gradient computation
+      hkm <- vector(mode = 'list', maxNumOptIter+1)
       hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
       gradient<- vector(mode = 'list', maxNumOptIter+1)
       lb <- vector(mode = 'list', maxNumOptIter+1)
       lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
       #the lambda_{kj}^{(m)} can be optimized for each k and m separately
      
-        optim.result=optimise_lambda_k_shift(LambdaK=lambda[[m]][k,],
+        optim.result=gradientDescent.shift(LambdaK=lambda[[m]][k,],
                                      data=binned.data[[m]],
                                      Z=Ez[k,,],
                                      hkm=hkm,
@@ -109,43 +106,18 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
                                      nuh=nuh,
                                      verbose=verbose,
                                      MAX_GRAD_ITER=maxNumOptIter,
-                                     reltol=numOptRelTol, hessian=hessian, 
-                                     method=method, optim.options=optim.options)
+                                     reltol=numOptRelTol, learning.rate=learning.rate)
       
         alpha_list[[m]][[k]] =exp( do.call(rbind,lambda_iter))
         hkm <- unlist(hkm)
-        hkm_lb <- unlist(hkm_lb)
         gradient <- unlist(gradient)
         print(length(hkm))
         print(length(gradient))
-        
-        if(length(gradient)==0){
-          print("no gradient")
-          print(paste0("lb: ",length(unlist(lb))))
-          print(paste0("hkm_lb: ",length(hkm_lb)))
-          print(paste0("nll: ",length(optim.result$value)))
-          hkm <- data.frame(Datatype=names(binned.data)[m],
-                            Component=k,
-                            EM.iter=0,
-                            hkm=hkm_lb,
-                            lb=unlist(lb),
-                            nll=optim.result$value)
-        }else{
-          print("with gradient")
-          hkm <- data.frame(Datatype=names(binned.data)[m],
-                            Component=k,
-                            EM.iter=0,
-                            hkm=hkm,
-                            nll=optim.result$value,
-                            gradient=gradient)
-        }
-        
-        if(hessian==TRUE){
-          hkm$detH=det(optim.result$hessian)
-        }
-         
-        
-      EM.diagnostics <- rbind(EM.diagnostics, hkm)
+        hkm <- data.frame(Datatype=names(binned.data)[m],
+                          Component=k,
+                          EM.iter=0,
+                          hkm=hkm, gradient=gradient, nll=optim.result$value)
+        EM.diagnostics <- rbind(EM.diagnostics, hkm)
       lambda[[m]][k,] <-optim.result$par
       lambda_optim_message[[m]][[k]]<-optim.result
       
@@ -199,8 +171,8 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   #shifting and flipping, one needs to write separate EM-loops for (shift=false, flip=false), 
   #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
   #4 different em-functions
-  #while (iter < EM.maxit ) {
-  while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
+  while (iter < EM.maxit ) {
+  #while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
     print(paste0("EM: ",iter))
     if (verbose)
       cat('Calculating Ez values...\n')
@@ -212,8 +184,8 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     Ez <- calc_z_shift(Ez, binned.data, weights, xi, lambda) #TODO
     Ez_list[[iter+2]]=data.table::copy(Ez)
     
-    print(paste0("Ez_list_length: ",length(Ez_list) ))
-    print(paste0("E_list[[1]]: ",str(Ez_list[[1]]) ))
+    #print(paste0("Ez_list_length: ",length(Ez_list) ))
+    #print(paste0("E_list[[1]]: ",str(Ez_list[[1]]) ))
     
     #print(tracemem(Ez_list[[1]])==tracemem(Ez))
     
@@ -241,12 +213,12 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
         
-        hkm <- vector(mode = 'list', maxNumOptIter+1) #comes from gradient computation
+        hkm <- vector(mode = 'list', maxNumOptIter+1)
         hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
         gradient <- vector(mode = 'list', maxNumOptIter+1)
         lb <- vector(mode = 'list', maxNumOptIter+1)
         lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
-        optim.result <- optimise_lambda_k_shift(LambdaK=lambda[[m]][k,],
+        optim.result <- gradientDescent.shift(LambdaK=lambda[[m]][k,],
                                           data=binned.data[[m]],
                                           Z=Ez[k,,],
                                           hkm=hkm,
@@ -259,8 +231,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian, 
-                                          method=method, optim.options=optim.options)
+                                          reltol=numOptRelTol, learning.rate=learning.rate)
         
         alpha_list[[m]][[k]]=exp( do.call(rbind,lambda_iter))
         lambda[[m]][k,] <-optim.result$par
@@ -268,36 +239,14 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
         
         
         hkm <- unlist(hkm)
-        hkm_lb <- unlist(hkm_lb)
+        
         gradient <- unlist(gradient)
         print(length(hkm))
         print(length(gradient))
-        if(length(gradient)==0){
-          print("no gradient")
-          print(length(unlist(lb)))
-          hkm <- data.frame(Datatype=names(binned.data)[m],
-                            Component=k,
-                            EM.iter=iter+1,
-                            hkm=hkm_lb,
-                            lb=unlist(lb),
-                            nll=optim.result$value)
-        }else{
-          print("with gradient")
-          hkm <- data.frame(Datatype=names(binned.data)[m],
-                            Component=k,
-                            EM.iter=iter+1,
-                            hkm=hkm,
-                            nll=optim.result$value,
-                            gradient=gradient)
-        }
-        
-        
-        if(hessian==TRUE){
-          hkm$detH=det(optim.result$hessian)
-        }
-        
-        
-       
+        hkm <- data.frame(Datatype=names(binned.data)[m],
+                          Component=k,
+                          EM.iter=iter+1,
+                          hkm=hkm,gradient=gradient, nll=optim.result$value)
         EM.diagnostics <- rbind(EM.diagnostics, hkm)
         
                 

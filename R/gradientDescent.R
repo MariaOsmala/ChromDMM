@@ -1,36 +1,39 @@
 
 
 
-gradientDescent<- function(LambdaK=lambda[[m]][k,],
-                data=binned.data[[m]],
-                Z=Ez[k,],
-                hkm=hkm,
-                gradient=gradient,
-                lambda_iter=lambda_iter,
-                lb=lb,
-                eta=eta,
-                nu=nu,
-                etah=etah,
-                nuh=nuh,
-                verbose=verbose,
+gradientDescent<- function(LambdaK,
+                data,
+                Z,
+                hkm,
+                hkm_lb,
+                gradient,
+                lambda_iter,
+                lb,
+                eta,
+                nu,
+                etah,
+                nuh,
+                verbose,
                 MAX_GRAD_ITER=1000,
                 reltol=1e-3, learning.rate=1e-3){
 
   
 
   
-  options(digits=20)
+  #options(digits=20)
     iter <- 0
     i <- 0
     
 
     
     hkm_index <- vector(mode='integer', 1)
+    hkm_lb_index <- vector(mode='integer', 1)
     gradient_index <- vector(mode='integer', 1)
     lb_index <- vector(mode='integer', 1)
     lambda_index <- vector(mode='integer', 1)
     params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                   hkm=hkm, gradient=gradient, lb=lb,hkm_index=hkm_index,gradient_index=gradient_index,
+                   hkm=hkm, hkm_lb=hkm_lb, gradient=gradient, lb=lb,hkm_index=hkm_index,
+                   hkm_lb_index=hkm_lb_index,gradient_index=gradient_index,
                    lb_index= lb_index, lambda_index=lambda_index)
     #hkm_index <- vector(mode='integer', 1)
     #params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
@@ -50,7 +53,7 @@ gradientDescent<- function(LambdaK=lambda[[m]][k,],
       gradient.iter=append(gradient.iter, sqrt( sum(gr*gr)) )
       delta <- abs(cost[i+1] - cost[i])
       if((cost[i+1] - cost[i]) > 0){
-        print("The cost is increasing.  Try reducing alpha.")
+        print("The cost is increasing.  Try reducing learning rate.")
         return()
       }
       iter <- append(iter, i)

@@ -36,6 +36,7 @@ dmn.em.gradient.descent <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, L
       if (verbose)
         setTxtProgressBar(pb, (m-1)*K+k)
       hkm <- vector(mode = 'list', maxNumOptIter+1)
+      hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
       gradient<- vector(mode = 'list', maxNumOptIter+1)
       lb <- vector(mode = 'list', maxNumOptIter+1)
       lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
@@ -45,6 +46,7 @@ dmn.em.gradient.descent <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, L
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
+                                          hkm_lb=hkm_lb,
                                           gradient=gradient,
                                           lb=lb,
                                           lambda_iter=lambda_iter,
@@ -156,6 +158,7 @@ dmn.em.gradient.descent <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, L
           setTxtProgressBar(pb, (m-1)*K+k)
         
         hkm <- vector(mode = 'list', maxNumOptIter+1)
+        hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
         gradient <- vector(mode = 'list', maxNumOptIter+1)
         lb <- vector(mode = 'list', maxNumOptIter+1)
         lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
@@ -163,6 +166,7 @@ dmn.em.gradient.descent <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, L
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
+                                          hkm_lb=hkm_lb,
                                           gradient=gradient,
                                           lb=lb,lambda_iter=lambda_iter,
                                           eta=eta,

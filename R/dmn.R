@@ -76,7 +76,7 @@ dmn <-
              repetition=4,
              maxNumOptIter=1000,
              numOptRelTol=1e-12,
-             parallel=T, init="random", method="BFGS", hessian=FALSE, learning.rate=1e-3)
+             parallel=T, init="random", method="BFGS",optim.options=NULL, hessian=FALSE, learning.rate=1e-3)
 {
     if (is.matrix(count)) count <- list(Data=count)
     stopifnot(is.list(count))
@@ -112,7 +112,7 @@ dmn <-
                          soft.kmeans.stiffness=soft.kmeans.stiffness,
                          randomInit=randomInit,
                          maxNumOptIter=maxNumOptIter,
-                         numOptRelTol=numOptRelTol, init=init, method=method, hessian=hessian,
+                         numOptRelTol=numOptRelTol, init=init, method=method, optim.options=optim.options, hessian=hessian,
                          learning.rate=learning.rate)
       o <- order(ans$Mixture$Weight, decreasing=TRUE)
       ans <- within(ans, {

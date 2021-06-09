@@ -230,9 +230,9 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
     Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
     Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
     
-    // Rcpp::List hkm = as<Rcpp::List>(lparams["hkm"]);
-    // Rcpp::IntegerVector hkm_index = as<Rcpp::IntegerVector>(lparams["hkm_index"]);
-    // 
+    Rcpp::List hkm_lb = as<Rcpp::List>(lparams["hkm_lb"]);
+    Rcpp::IntegerVector hkm_lb_index = as<Rcpp::IntegerVector>(lparams["hkm_lb_index"]);
+
     
     
     Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
@@ -270,6 +270,7 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
         dWeight += adPi[i]; //sum over z_i
     }
 
+    
     for (j = 0; j < L; j++) {
         const double dLambda = lambda[j];
         const double dAlpha = exp(dLambda);
@@ -300,15 +301,15 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
     } else {
       double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
       
-      // if (hkm_index[0] < hkm.size()) {
-      //   hkm[hkm_index[0]] = hk;
-      // }
-      // else{
-      //   Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
-      //           hkm_index[0], hkm.size());
-      // }
-      // hkm_index[0] += 1;
-      // 
+      if (hkm_lb_index[0] < hkm_lb.size()) {
+        hkm_lb[hkm_lb_index[0]] = hk;
+      }
+      else{
+        Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
+                hkm_lb_index[0], hkm_lb.size());
+      }
+      hkm_lb_index[0] += 1;
+
       
       reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
     }
@@ -343,7 +344,8 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
  */
 
 // [[Rcpp::export]]
-Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLambda,Rcpp::List& lambda_iter,
+Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLambda,
+                                                      Rcpp::List& lambda_iter,
                                                       Rcpp::List lparams)
 {
     Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L
@@ -374,7 +376,6 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
         adStore[i] = 0.0;
         dWeight += adPi[i];
     }
-
     for (j = 0; j < L; j++) {
         adAlpha[j] = exp(ptLambda[j]);
         dStore += adAlpha[j];
@@ -770,7 +771,7 @@ double neg_lower_bound(Rcpp::NumericMatrix Z, Rcpp::NumericVector W,
       // Rcpp::Rcout << "k: "<<k << "\n";
       for(j = 0; j < L[m]; j++){
           const double dAlpha = exp(Lambda_matrix(k, j));
-          LngammaLambda0_matrix[k, j] = gsl_sf_lngamma(dAlpha);
+          LngammaLambda0_matrix(k, j) = gsl_sf_lngamma(dAlpha);
         } //j
     } //k
     LngammaLambda0(m) = LngammaLambda0_matrix;

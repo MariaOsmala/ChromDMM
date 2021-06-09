@@ -4,29 +4,31 @@ channels:
   - bioconda
   - defaults
 dependencies:
-  - r-essentials
-  - r-rcpp
-  - r-ggplot2
+  - r-base=4.0.3 
+  - r-essentials 
+  - r-rcpp 
+  - r-ggplot2 
   - r-reshape2
-  - bioconductor-s4vectors
+  - bioconductor-s4vectors 
   - bioconductor-biocgenerics
-  - r-rcppgsl
-  - r-devtools
-  - bioconductor-genomeinfodb
+  - r-rcppgsl 
+  - r-devtools 
+  - bioconductor-genomeinfodb 
   - bioconductor-genomicranges
-  - bioconductor-iranges
-  - r-e1071
+  - bioconductor-iranges 
+  - r-e1071 
   - r-ggally
-  - gsl
+  - gsl 
   - bioconductor-bsgenome.hsapiens.ucsc.hg19
-  - r-gtools
-  - r-cairo
-  - r-rocr
-  - r-plyr
-  - r-dplyr
-  - r-egg
+  - r-gtools 
+  - r-cairo 
+  - r-rocr 
+  - r-plyr 
+  - r-dplyr 
+  - r-egg 
   - r-gridextra
   - r-ggpubr
-  - r-gdata
-  - r-clues
+  - r-gdata 
+  - r-clues 
   - r-ggridges 
+  - r-rcpparmadillo

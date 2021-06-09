@@ -4,6 +4,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  - r-base=4.0.3
   - r-essentials
   - r-rcpp
   - r-rcpparmadillo
@@ -19,6 +20,6 @@ dependencies:
   - r-e1071
   - r-ggally
   - gsl
-  - clang
+
 
 

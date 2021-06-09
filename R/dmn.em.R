@@ -1,6 +1,6 @@
 dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose, 
                    maxNumOptIter, binned.data, eta, nu, etah, nuh, numOptRelTol, 
-                   EM.maxit, EM.threshold, method="BFGS", hessian=hessian) {
+                   EM.maxit, EM.threshold, method="BFGS", optim.options=NULL, hessian=FALSE) {
   
   
   Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
@@ -35,7 +35,8 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     for (k in 1:K) { #over clusters
       if (verbose)
         setTxtProgressBar(pb, (m-1)*K+k)
-      hkm <- vector(mode = 'list', maxNumOptIter+1)
+      hkm <- vector(mode = 'list', maxNumOptIter+1) #comes from gradient computation
+      hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
       gradient<- vector(mode = 'list', maxNumOptIter+1)
       lb <- vector(mode = 'list', maxNumOptIter+1)
       lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
@@ -45,6 +46,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
+                                          hkm_lb=hkm_lb,
                                           gradient=gradient,
                                           lb=lb,
                                           lambda_iter=lambda_iter,
@@ -54,15 +56,35 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian,method=method)
+                                          reltol=numOptRelTol, hessian=hessian,method=method, optim.options=optim.options)
       
      alpha_list[[m]][[k]] =exp( do.call(rbind,lambda_iter))
      hkm <- unlist(hkm)
+     hkm_lb <- unlist(hkm_lb)
      gradient <- unlist(gradient)
-     hkm <- data.frame(Datatype=names(binned.data)[m],
-                       Component=k,
-                       EM.iter=0,
-                       hkm=hkm, gradient=gradient, nll=optim.result$value, detH=det(optim.result$hessian))
+     
+     
+     if(length(gradient)==0){
+       hkm <- data.frame(Datatype=names(binned.data)[m],
+                         Component=k,
+                         EM.iter=0,
+                         hkm=hkm_lb,
+                         lb=unlist(lb),
+                         nll=optim.result$value)
+     }else{
+       hkm <- data.frame(Datatype=names(binned.data)[m],
+                         Component=k,
+                         EM.iter=0,
+                         hkm=hkm,
+                         nll=optim.result$value,
+                         gradient=gradient)
+     }
+     
+     if(hessian==TRUE){
+       hkm$detH=det(optim.result$hessian)
+     }
+     
+     
      EM.diagnostics <- rbind(EM.diagnostics, hkm)
    
       lambda[[m]][k,] <-optim.result$par
@@ -117,8 +139,8 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   #shifting and flipping, one needs to write separate EM-loops for (shift=false, flip=false), 
   #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
   #4 different em-functions
-  while (iter < EM.maxit ) {
-  #while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
+  #while (iter < EM.maxit ) {
+  while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
     print(iter)
   #while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
   #  print(iter)
@@ -155,7 +177,8 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
         
-        hkm <- vector(mode = 'list', maxNumOptIter+1)
+        hkm <- vector(mode = 'list', maxNumOptIter+1) #comes from gradient computation
+        hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
         gradient <- vector(mode = 'list', maxNumOptIter+1)
         lb <- vector(mode = 'list', maxNumOptIter+1)
         lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
@@ -163,6 +186,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
+                                          hkm_lb=hkm_lb,
                                           gradient=gradient,
                                           lb=lb,lambda_iter=lambda_iter,
                                           eta=eta,
@@ -171,7 +195,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian, method=method)
+                                          reltol=numOptRelTol, hessian=hessian, method=method, optim.options=optim.options)
         
         alpha_list[[m]][[k]]=exp( do.call(rbind,lambda_iter))
         lambda[[m]][k,] <-optim.result$par
@@ -180,11 +204,30 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
         
         
         hkm <- unlist(hkm)
+        hkm_lb <- unlist(hkm_lb)
         gradient <- unlist(gradient)
-        hkm <- data.frame(Datatype=names(binned.data)[m],
-                          Component=k,
-                          EM.iter=iter+1,
-                          hkm=hkm,gradient=gradient, nll=optim.result$value, detH=det(optim.result$hessian))
+       
+        if(length(gradient)==0){
+          hkm <- data.frame(Datatype=names(binned.data)[m],
+                            Component=k,
+                            EM.iter=iter+1,
+                            hkm=hkm_lb,
+                            lb=unlist(lb),
+                            nll=optim.result$value)
+        }else{
+          hkm <- data.frame(Datatype=names(binned.data)[m],
+                            Component=k,
+                            EM.iter=iter+1,
+                            hkm=hkm,
+                            nll=optim.result$value,
+                            gradient=gradient)
+        }
+        
+        
+        if(hessian==TRUE){
+          hkm$detH=det(optim.result$hessian)
+        }
+        
         EM.diagnostics <- rbind(EM.diagnostics, hkm)
       }
     }
@@ -278,7 +321,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     
     
   } #EM loop ends
-  
+  print("EM finished")
   
   # Model selection
   # hessian
@@ -338,6 +381,7 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   #result$Mixture <- list(Weight=mixture_list$Mixture)
   result$Mixture <- list(Weight=weights/N)
   
+
   EM.diagnostics <- plyr::ddply(EM.diagnostics, c('Datatype', 'Component', 'EM.iter'),
                                 transform, NO.iter.count=length(hkm), NO.iter=seq_along(hkm))
   result$EM.diagnostics <- EM.diagnostics
