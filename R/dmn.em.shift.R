@@ -51,10 +51,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   Ez_list=list()
   Ez_list[[1]]=data.table::copy(Ez)
 
-  print(paste0("Ez_list_length: ",length(Ez_list) ))
-  print(paste0("Ez_list[[1]]: ",str(Ez_list[[1]]) ))
-  
-  print(tracemem(Ez_list[[1]])==tracemem(Ez))
+ 
   
   
   #lambda is log(alpha)
@@ -116,8 +113,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
         hkm <- unlist(hkm)
         hkm_lb <- unlist(hkm_lb)
         gradient <- unlist(gradient)
-        print(length(hkm))
-        print(length(gradient))
+       
         
         if(length(gradient)==0){
           print("no gradient")
@@ -200,7 +196,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
   #4 different em-functions
   #while (iter < EM.maxit ) {
-  while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
+  while ((iter < EM.maxit) && (nll.change > EM.threshold) ) {
     print(paste0("EM: ",iter))
     if (verbose)
       cat('Calculating Ez values...\n')
@@ -212,10 +208,6 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
     Ez <- calc_z_shift(Ez, binned.data, weights, xi, lambda) #TODO
     Ez_list[[iter+2]]=data.table::copy(Ez)
     
-    print(paste0("Ez_list_length: ",length(Ez_list) ))
-    print(paste0("E_list[[1]]: ",str(Ez_list[[1]]) ))
-    
-    #print(tracemem(Ez_list[[1]])==tracemem(Ez))
     
     stopifnot(!is.na(Ez), !is.infinite(Ez))
     
@@ -430,8 +422,6 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   
   result$GoodnessOfFit <- gof
   result$Ez <- Ez
-  print(paste0("Ez_list_length: ",length(Ez_list) ))
-  print(paste0("E_list[[1]]: ",str(Ez_list[[1]]) ))
   result$Ez_list <- Ez_list
   result$Group <- t(apply(Ez,c(1,3),sum))
   #result$Group2 <-  #sum to 1 for each n=1,..,N

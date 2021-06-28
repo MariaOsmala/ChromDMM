@@ -474,19 +474,23 @@ double neg_log_evidence_i(Rcpp::IntegerVector dataRow, Rcpp::NumericVector Lambd
     double dSumAlphaN = 0.0; // \sum_j^L (x_{ij} + \alpha_{j})
 
     for (j = 0; j < L; j++) {
+        // Rcpp::Rcout << "j: "<<j << "\n";
         const double n = dataRow[j]; // x_{ij}
         const double dAlpha = exp(Lambda[j]); //alpha_j
         const double dAlphaN = n + dAlpha; // x_{ij} + alpha_j
         // dLogEAlpha_1
         dLogEAlpha += LnGammaLambda0[j]; // \sum_j^L lngamma ( \alpha_{jk}^{(m)}  )
+        // Rcpp::Rcout << "dLogEAlpha: "<<dLogEAlpha << "\n";
         dSumAlpha += dAlpha; // \sum_j^L \alpha_{j}
         dSumAlphaN += dAlphaN; // \sum_j^L (x_{ij} + \alpha_{j})
         dLogE -= n ? gsl_sf_lngamma(dAlphaN) : LnGammaLambda0[j] ;
+        // Rcpp::Rcout << "dLogE: "<<dLogE << "\n";
     }
     // dLogEAlpha_2 
     dLogEAlpha -= gsl_sf_lngamma(dSumAlpha); // \sum_j^L lngamma ( \alpha_{jk}^{(m)}  ) - lngamma(  \sum_j^L (x_{ij} + \alpha_{j}) )
     dLogE += gsl_sf_lngamma(dSumAlphaN); // \sum_j^L (x_{ij} + \alpha_{j})
-
+    // Rcpp::Rcout << "dLogEAlpha: "<<dLogEAlpha << "\n";
+    // Rcpp::Rcout << "dLogE: "<<dLogE << "\n";
     return dLogE + dLogEAlpha;
 }
 
@@ -774,7 +778,7 @@ double neg_lower_bound(Rcpp::NumericMatrix Z, Rcpp::NumericVector W,
           LngammaLambda0_matrix(k, j) = gsl_sf_lngamma(dAlpha);
         } //j
     } //k
-    LngammaLambda0(m) = LngammaLambda0_matrix;
+    LngammaLambda0(m) = Rcpp::clone(LngammaLambda0_matrix);
   } //m
   
   double dSum = 0.0;

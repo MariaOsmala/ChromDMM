@@ -68,6 +68,7 @@ dmn <-
              etah=0,
              nuh=0,
              xi=NULL,
+             zeta=NULL,
              maxIt=250,
              EM.threshold=1e-6,
              soft.kmeans.maxit=1000,
@@ -106,7 +107,7 @@ dmn <-
                          flip=flip,
                          verbose=verbose,
                          eta=eta, nu=nu,
-                         etah=etah, nuh=nuh, xi=xi,
+                         etah=etah, nuh=nuh, xi=xi, zeta=zeta,
                          EM.maxit=maxIt, EM.threshold=EM.threshold,
                          soft.kmeans.maxit=soft.kmeans.maxit,
                          soft.kmeans.stiffness=soft.kmeans.stiffness,
@@ -114,6 +115,7 @@ dmn <-
                          maxNumOptIter=maxNumOptIter,
                          numOptRelTol=numOptRelTol, init=init, method=method, optim.options=optim.options, hessian=hessian,
                          learning.rate=learning.rate)
+      print(ans$Mixture$Weight)
       o <- order(ans$Mixture$Weight, decreasing=TRUE)
       ans <- within(ans, {
           Group <- Group[,o, drop=FALSE]
