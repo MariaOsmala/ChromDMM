@@ -229,12 +229,8 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
     
     Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
     Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
-    
     Rcpp::List hkm_lb = as<Rcpp::List>(lparams["hkm_lb"]);
     Rcpp::IntegerVector hkm_lb_index = as<Rcpp::IntegerVector>(lparams["hkm_lb_index"]);
-
-    
-    
     Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
     
     
@@ -301,38 +297,20 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
     } else {
       double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
       
-      if (hkm_lb_index[0] < hkm_lb.size()) {
-        hkm_lb[hkm_lb_index[0]] = hk;
-      }
-      else{
-        Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
-                hkm_lb_index[0], hkm_lb.size());
-      }
-      hkm_lb_index[0] += 1;
+     
 
       
       reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
     }
 
-    double retVal = dLogE + dWeight*dLogEAlpha + // complete data likelihood term
+    return dLogE + dWeight*dLogEAlpha + // complete data likelihood term
       GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term;//prior term, ITA corrected to ITA-1 !!!
 
     //should it be (GAMMA_ITA-1)*dSumLambda???
     // Rprintf("LB value: %f\n", retVal);
     
-
     
-    if (lb_index[0] < lb.size()) {
-      lb[lb_index[0]] = retVal;
-    }
-    else{
-      Rprintf("lb_index exceeds lb vector length!!! lb_index: %i, lb.length: %i\n",
-              lb_index[0], lb.size());
-    }
-    lb_index[0] += 1;
-    
-    
-    return retVal; 
+  
 
 }
 

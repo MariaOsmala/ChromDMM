@@ -285,7 +285,8 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     nLB <- neg_lower_bound(Ez, weights, lambda,
                                  binned.data, eta, nu,
                                  etah, nuh)
-    stopifnot(!is.na(nLB), !is.infinite(nLB))
+    print(nLB)
+    #stopifnot(!is.na(nLB), !is.infinite(nLB))
     nLB_list[[nLB_iter]]=nLB
     nLB_iter=nLB_iter+1
     
