@@ -34,7 +34,7 @@
  */
 
 // [[Rcpp::export]]
-double neg_log_evidence_lambda_pi_shift_flip(Rcpp::NumericVector lambda, Rcpp::List& lambda_iter, Rcpp::List lparams)
+double neg_log_evidence_lambda_pi_shift_flip(Rcpp::NumericVector lambda, Rcpp::List lparams)
 {
 
 
@@ -42,36 +42,12 @@ double neg_log_evidence_lambda_pi_shift_flip(Rcpp::NumericVector lambda, Rcpp::L
 
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L_x
   arma::Cube<double> adPi = as<arma::cube>(lparams["pi"]); //size Sx2xN
-  // adPi.n_cols 2 (flips)
-  // adPi.n_rows S
-  // adPi.n_slices N
-  // arma::mat A = adPi.row(0); //2xN
-  // arma::mat B = adPi.col(0); //SxN
-  // arma::mat C = adPi.slice(0); //Sx2
-  // adPi(s,f,i)
-
+  
   double GAMMA_ITA = as<double>(lparams["eta"]);
   double GAMMA_NU = as<double>(lparams["nu"]);
   double GAMMA_ITA_H = as<double>(lparams["etah"]);
   double GAMMA_NU_H = as<double>(lparams["nuh"]);
   
-  Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
-  Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
-  Rcpp::List hkm_lb = as<Rcpp::List>(lparams["hkm_lb"]);
-  Rcpp::IntegerVector hkm_lb_index = as<Rcpp::IntegerVector>(lparams["hkm_lb_index"]);
-  Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
-  
-  if (lambda_index[0] < lambda_iter.size()) {
-    lambda_iter[lambda_index[0]]=clone(lambda);
-  }
-  else{
-    Rprintf("lambda_index exceeds lambda_iter vector length!!! lambda_index: %i, lambda_iter.length: %i\n",
-            lambda_index[0], lambda_iter.size());
-  }
-  lambda_index[0] += 1;
-  
-  
-
   const int Lx = aanX.ncol(); // L_x
   const int N = aanX.nrow();
   const int S = adPi.n_rows;
@@ -83,14 +59,14 @@ double neg_log_evidence_lambda_pi_shift_flip(Rcpp::NumericVector lambda, Rcpp::L
   double dLogEAlpha_final = 0.0;
   double dSumAlpha = 0.0; // sum of alpha \sum_{j=1}^S \alpha_{j}
   double dSumLambda = 0.0; // sum of lambda?
-  double dHk = 0.0; //this is not used
+
   // double dWeight = 0.0; // \sum_{n=1}^N E(z_i)
-  Rcpp::NumericVector dWeight(S); //INIT
-  Rcpp::NumericVector dAlpha(La); //INIT
-  Rcpp::NumericMatrix dWeight_f(S,N); //INIT
+  Rcpp::NumericVector dWeight(S); //
+  Rcpp::NumericVector dAlpha(La); //
+  Rcpp::NumericMatrix dWeight_f(S,N); //
   // Rcpp::NumericVector adSumAlphaN(N); // \sum_{j}^S \alpha_{j}+x_{ij}
-  Rcpp::NumericMatrix adSumAlphaN(S,N); //INIT
-  Rcpp::NumericVector dSumAlpha_s(S); //INIT
+  Rcpp::NumericMatrix adSumAlphaN(S,N); //
+  Rcpp::NumericVector dSumAlpha_s(S); //
   Rcpp::NumericVector dLogEAlpha(S); // \log \gamma ( \sum_{j=1}^S  \alpha_{j} )
 
   for(s = 0; s < S; s++){
@@ -178,8 +154,7 @@ double neg_log_evidence_lambda_pi_shift_flip(Rcpp::NumericVector lambda, Rcpp::L
  */
 
 // [[Rcpp::export]]
-Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift_flip(Rcpp::NumericVector ptLambda,  Rcpp::List& lambda_iter,
-                                                Rcpp::List lparams)
+Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift_flip(Rcpp::NumericVector ptLambda, Rcpp::List lparams)
 {
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x S
   arma::Cube<double> adPi = as<arma::cube>(lparams["pi"]); // Sx2xN
@@ -238,18 +213,14 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift_flip(Rcpp::NumericVe
         }
       }
     }
-    // Rcpp::Rcout  <<"\n";
   }
 
 
 
   for(s = 0; s < S; s++){
-    // Rcpp::Rcout << "s: " << s <<" ";
-    for(k = 0; k < Lx; k++ ){ // Why K, should be j, does not really matter here
-      // Rcpp::Rcout  << k+s <<" ";
+    for(k = 0; k < Lx; k++ ){ 
       dStore[s] += adAlpha[k+s];
-      }
-    // Rcpp::Rcout <<"\n";
+    }
   }
 
 
@@ -391,17 +362,12 @@ Rcpp::List calc_z_shift_flip(Rcpp::List Z, Rcpp::List data,
   
   // Compute lngammaalpha_jkmsf
   for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
     Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
     arma::Cube<double> LngammaLambda0_matrix_1(K, Lx[m],S); // for f=1 (no flip)
     arma::Cube<double> LngammaLambda0_matrix_2(K, Lx[m],S); // for f=2 (with flip)
     for(k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
-      for(s = 0; s < S; s++){
-        // Rcpp::Rcout << "s: "<<s << "\n";
-        for(j = 0; j < Lx[m]; j++){
-          // Rcpp::Rcout <<"j: "<<j << ", j+s: "<<j+s << "\n";
-          
+       for(s = 0; s < S; s++){
+         for(j = 0; j < Lx[m]; j++){
           LngammaLambda0_matrix_1(k, j, s) = gsl_sf_lngamma( exp( Lambda_matrix(k, j+s ) ) );
           LngammaLambda0_matrix_2(k, j, s) = gsl_sf_lngamma( exp( Lambda_matrix(k, La[m]-S+s-j ) ) );
         } //j
@@ -458,12 +424,6 @@ Rcpp::List calc_z_shift_flip(Rcpp::List Z, Rcpp::List data,
           
           
         } //s
-        //data_row x_i^m 1 x L
-        // lambda_matrix (k, _) log alpha_k^m 1 x L
-        // LngammaLambda0_matrix(k, _) 1 x L lngamma ( \alpha_{jk}^{(m)}  )
-        
-        
-        
       } //over K
     } //over M
     
@@ -507,11 +467,8 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
   
   Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x Lx
   const int N = temp.nrow();
-  // Rcpp::Rcout << "N: "<<N << "\n";
   const int K = W.length();
-  // Rcpp::Rcout << "K: "<<K << "\n";
   const int M = data.size();
-  // Rcpp::Rcout << "M: "<<M << "\n";
   int i, j, k, m, s, f;
   
   Rcpp::NumericVector Lx(M);
@@ -522,7 +479,6 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
     La[m] = Lx[m] + S - 1; //assume all Lx are the same
   }
   
-  // Rcpp::Rcout << "La: "<< La[0] << "\n";
   
   Rcpp::List LngammaLambda0_1(M); // for f=1 no flip
   Rcpp::List LngammaLambda0_2(M); // for f=2 with flip
@@ -549,41 +505,32 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
     arma::Cube<double> LngammaLambda0_matrix_1(K, Lx[m],S); // lng (alpha_jk)
     arma::Cube<double> LngammaLambda0_matrix_2(K, Lx[m],S); 
     Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrices
-    // Rcpp::Rcout << "m: "<<m << "\n";
     for (k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
-      for(s = 0; s < S; s++){
-        // Rcpp::Rcout << "s: "<<s << "\n";
-        dSumAlphaK[s] = 0.0; // separate sum for each k,m,s
-        LogBAlpha(m, k, s) = 0.0;
-        // Rcpp::Rcout << "N: "<<N << "\n";
-        for (j = 0; j < Lx[m]; j++){
-          // Rcpp::Rcout << "j: "<<j << "\n";
-          double dAlpha_1 = exp(Lambda_matrix(k, j + s )); // \ alpha_jks
-          double lngammaAlpha_1 = gsl_sf_lngamma(dAlpha_1); // lng (alpha_jk)
-          LngammaLambda0_matrix_1(k, j, s) = lngammaAlpha_1; // // lng (alpha_jk)
-          LngammaLambda0_matrix_2(k, j, s) = gsl_sf_lngamma( exp( Lambda_matrix(k, La[m]-S+s-j ) ) );
-          dSumAlphaK[s] += dAlpha_1; // \sum_j^L \alpha_jk
-          LogBAlpha(m, k, s) += lngammaAlpha_1; // LogBAlpha_1
-        } //over j
-        LogBAlpha(m, k,s) -= gsl_sf_lngamma(dSumAlphaK[s]); // -LogBAlpha_2
-      } //over s
+       for(s = 0; s < S; s++){
+         dSumAlphaK[s] = 0.0; // separate sum for each k,m,s
+         LogBAlpha(m, k, s) = 0.0;
+         for (j = 0; j < Lx[m]; j++){
+            double dAlpha_1 = exp(Lambda_matrix(k, j + s )); // \ alpha_jks
+            double lngammaAlpha_1 = gsl_sf_lngamma(dAlpha_1); // lng (alpha_jk)
+            LngammaLambda0_matrix_1(k, j, s) = lngammaAlpha_1; // // lng (alpha_jk)
+            LngammaLambda0_matrix_2(k, j, s) = gsl_sf_lngamma( exp( Lambda_matrix(k, La[m]-S+s-j ) ) );
+            dSumAlphaK[s] += dAlpha_1; // \sum_j^L \alpha_jk
+            LogBAlpha(m, k, s) += lngammaAlpha_1; // LogBAlpha_1
+         } //over j
+         LogBAlpha(m, k,s) -= gsl_sf_lngamma(dSumAlphaK[s]); // -LogBAlpha_2
+       } //over s
     } // over k
     LngammaLambda0_1(m) = LngammaLambda0_matrix_1; // list of length M
     LngammaLambda0_2(m) = LngammaLambda0_matrix_2; // list of length M
   } // over m
   
-  // Rcpp::Rcout << "LogBAlpha: "<< "\n";
-  
   for (i = 0; i < N; i++) {
     double FinaldProb = 0.0;
-    
     arma::Cube<double> LogStore_1(M, K, S);
     arma::Cube<double> LogStore_2(M, K, S);
     Rcpp::NumericVector offset(M);
     // Computes the log p(x_i^m|, z_ik=1, theta) for k and m, results in matrix LogStore
-    for (m = 0; m < M; m++) {
-      // Rcpp::Rcout << "m: "<<m << "\n";
+    for (m = 0; m < M; m++){
       offset[m] = -BIG_DBL;
       double dSum = 0.0; // \sum_j^L x_ij
       double dFactor = 0.0; // \sum_j^L lng( x_ij +1) - lngamma( \sum_j^L x_ij +1)
@@ -592,10 +539,8 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
       Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]);
       arma::Cube<double> LngammaLambda0_matrix_1 = LngammaLambda0_1(m); //size K x Lx x S
       arma::Cube<double> LngammaLambda0_matrix_2 = LngammaLambda0_2(m); //size K x Lx x S
-      // NumericMatrix LngammaLambda0_matrix = as<NumericMatrix>(LngammaLambda0[m]); // lng (alpha_jk) K x L matrix
       
       for (j = 0; j < Lx[m]; j++) {
-        // Rcpp::Rcout << "j: "<<j << "\n";
         dSum += data_matrix(i, j); // dSum_m, this is J_i^m
         // dFactor does not depend on parameters, why computed?
         // dFactor_1
@@ -605,33 +550,20 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
       dFactor -= gsl_sf_lngamma(dSum + 1.0);  // \sum_j^L lng( x_ij +1) - lngamma( \sum_j^L x_ij +1)
       
       for (k = 0; k < K; k++) {
-        // Rcpp::Rcout << "k: "<<k << "\n";
         Rcpp::NumericVector dSumAlphaKN(S); // \sum_j^L \alpha_jk + x_ij
         Rcpp::NumericVector dLogBAlphaN_1(S); // lng( \alpha_jk + x_ij ) - lng( \sum_j^L \alpha_jk + x_ij )
         Rcpp::NumericVector dLogBAlphaN_2(S);
         for(s = 0; s < S; s++){
-          // Rcpp::Rcout << "s: "<<s << "\n";
           dSumAlphaKN[s]=0.0;
           dLogBAlphaN_1[s]=0.0;
           dLogBAlphaN_2[s]=0.0;
           for (j = 0; j < Lx[m]; j++) {
-            // Rcpp::Rcout << "j: "<<j << "\n";
             int countN = data_matrix(i, j); // x_ij
-            // Rcpp::Rcout << "j+s: "<<j+s << "\n";
             double dAlphaN_1 = exp(Lambda_matrix(k, j+s)) + countN; // \alpha_jk + x_ij
-            
-            // Rcpp::Rcout << "La-S+s-j: "<< La[m] - S + s -j << "\n";
             double dAlphaN_2 = exp(Lambda_matrix(k, La[m] - S + s -j )) + countN;
-            // Rcpp::Rcout << "test 1: " << "\n";
             dSumAlphaKN[s] += dAlphaN_1; // \sum_j^L \alpha_jk + x_ij
-            // Rcpp::Rcout << "test 2: " << "\n";
             dLogBAlphaN_1[s] += countN ? gsl_sf_lngamma(dAlphaN_1) : LngammaLambda0_matrix_1(k, j, s); // dLogBAlphaN_1[m,k,s]
-            // Rcpp::Rcout << "test 3: " << "\n";
-            // Rcpp::Rcout << "k: " << k << "\n";
-            // Rcpp::Rcout << "La[m] - S + s - j: " << La[m] - S + s - j<< "\n";
-            // Rcpp::Rcout << "s: "<< s << "\n";
             dLogBAlphaN_2[s] += countN ? gsl_sf_lngamma(dAlphaN_2) : LngammaLambda0_matrix_2(k, j , s);
-            // Rcpp::Rcout << "Lambda0Matrix: " << "\n";
           }
           dLogBAlphaN_1[s] -= gsl_sf_lngamma(dSumAlphaKN[s]); // // dLogBAlphaN_2[m,k,s]
           dLogBAlphaN_2[s] -= gsl_sf_lngamma(dSumAlphaKN[s]);
@@ -646,8 +578,6 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
             offset(m) = LogStore_2(m, k,s); //offset will be the largest of LogStore(m,:,:), or should it be largest of LogStore(m,:,k)??
           
         } //over S
-        
-         // Rcpp::Rcout << "LogStore: "<< "\n";
       } //over K
     } //over M
     
@@ -666,24 +596,15 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
       }
       
       // normalize mixing weights
-      // Rcpp::Rcout << "W[k]: "<< W[k] << "\n";
-      
+            
       double piK = W[k]/Rcpp::sum(W);
-      
-      // Rcpp::Rcout << "piK: "<< piK << "\n";
       FinaldProb += piK*dProb[k]; //sum of column k over m rows
-      
-      // Rcpp::Rcout << "dProb: "<< dProb << "\n";
     } // k
     
-    
     dRet += log(FinaldProb)+Rcpp::sum(offset); //logarithm of the normalization term, sum over all n
-    // Rcpp::Rcout << "dRet: "<< dRet << "\n";
+    
     
   } //over N
-  
-  
-  
   
   dL5 = -sum(La) * K * gsl_sf_lngamma(eta); // -M*L*K*lng(eta) sum(La)=M*La
   dL6 = eta * K * sum(La) * log(nu);  //eta*K*M*L*log(nu)
@@ -715,212 +636,12 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
   
 }
 
-// [[Rcpp::export]]
-double neg_lower_bound_shift_flip(Rcpp::List Z, Rcpp::NumericVector W, Rcpp::NumericVector xi,
-                                  Rcpp::NumericVector zeta,
-                                  Rcpp::List Lambda,Rcpp::List data, double eta, double nu,
-                                  double etah, double nuh, int S)
-{
-  
-  Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x Lx
-  const int N = temp.nrow();
-  //Rprintf("N: %i \n", N);
-  // Rcpp::Rcout << "N: "<<N << "\n";
-  const int K = W.length();
-  // Rcpp::Rcout << "K: "<<K << "\n";
-  const int M = data.size();
-  const int F = zeta.length();
-  // Rcpp::Rcout << "M: "<<M << "\n";
-  int i, j, k, m, s, l, f;
-  
-  arma::Cube<double> Z_1=as<arma::cube>(Z[0]);
-  arma::Cube<double> Z_2=as<arma::cube>(Z[1]);
-  
-  Rcpp::List evidence_matrix(F);  
-  arma::Cube<double> evidence_matrix_1(M, K, S);
-  arma::Cube<double> evidence_matrix_2(M, K, S);
-  
-  
-  Rcpp::NumericVector dWeightNSF(K); // dWeightNSF
-  Rcpp::NumericVector dWeightNKF(S); // dWeightNKF
-  Rcpp::NumericVector dWeightNKS(F); // dWeightNKS
-  
-  double dL7 = 0.0; //-nu* \sum_j^L \alpha_kj^m from prior
-  double dL8 = 0.0; // eta * \sum_j^L \lambda_kj^m from prior
-  double regterm2 = 0.0; // \sum_k^K ((etah - 1) * log(hkm) - nuh*hkm);  form prior
-  
-  // Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
-  
-  Rcpp::NumericVector Lx(M);
-  Rcpp::NumericVector La(M);
-  for (m = 0; m < M ; m++) {
-    temp = as<Rcpp::IntegerMatrix>(data[m]); //N x L matrix
-    Lx[m] = temp.ncol(); //L
-    La[m] = Lx[m] + S - 1; //assume all Lx are the same
-  }
-  
-  //Compute dWeightNK[s]
-  for(s = 0; s < S; s++){
-    dWeightNKF[s] = 0.0;
-    for (i = 0; i < N; i++) {
-      for (k = 0; k < K; k++) {
-        dWeightNKF[s] += Z_1(k,s,i); // Z_1 is K x S x N
-        dWeightNKF[s] += Z_2(k,s,i);
-      }
-    }
-  }
-  
-  
-  for (k = 0; k < K; k++) {
-    dWeightNSF[k] = 0.0;
-    for(s = 0; s < S; s++){
-      for (i = 0; i < N; i++) {
-        dWeightNSF[k] += Z_1(k,s,i); // Z is K x S x N
-        dWeightNSF[k] += Z_2(k,s,i); // Z is K x S x N
-      }
-    }
-   }
-  
-  
-  dWeightNKS[0] = 0.0;
-  dWeightNKS[1] = 0.0;
-  for (k = 0; k < K; k++) {
-    for(s = 0; s < S; s++){
-      for (i = 0; i < N; i++) {
-        dWeightNKS[0] += Z_1(k,s,i); // Z is K x S x N
-        dWeightNKS[1] += Z_2(k,s,i); // Z is K x S x N
-      }
-    }
-  }
-  
-  
-  
-  Rcpp::List LngammaLambda0_1(M); // for f=1 no flip
-  Rcpp::List LngammaLambda0_2(M); // for f=2 with flip
- 
-  
-  // Compute lngammaalpha_jkms
-  for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    arma::Cube<double> LngammaLambda0_matrix_1(K, Lx[m],S); // for f=1 (no flip)
-    arma::Cube<double> LngammaLambda0_matrix_2(K, Lx[m],S); // for f=2 (with flip)
-    for(k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
-      for(s = 0; s < S; s++){
-        // Rcpp::Rcout << "s: "<<s << "\n";
-        for(j = 0; j < Lx[m]; j++){
-          // Rcpp::Rcout <<"j: "<<j << ", j+s: "<<j+s << "\n";
-          
-          LngammaLambda0_matrix_1(k, j, s) = gsl_sf_lngamma( exp( Lambda_matrix(k, j+s ) ) );
-          LngammaLambda0_matrix_2(k, j, s) = gsl_sf_lngamma( exp( Lambda_matrix(k, La[m]-S+s-j ) ) );
-        } //j
-      } //s
-    } //k
-    LngammaLambda0_1(m) = LngammaLambda0_matrix_1;
-    LngammaLambda0_2(m) = LngammaLambda0_matrix_2;
-  } //m
-  
-  
-  
-  
-  
-  double dSum = 0.0;
-  for (m = 0; m < M; m++) {
-    
-    // offset[m] = BIG_DBL; //1.0e9
-    
-    Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x Lx matrix
-    Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    // Rcpp::NumericMatrix Ln = as<Rcpp::NumericMatrix>(LngammaLambda0[m]); // K x L lngamma ( \alpha_{jk}^{(m)}  )
-  
-    arma::Cube<double> LngammaLambda0_matrix_1 = LngammaLambda0_1(m); //K x Lx x S
-    arma::Cube<double> LngammaLambda0_matrix_2 = LngammaLambda0_2(m); //K x Lx x S
-    for (k = 0; k < K; k++) {
-      
-      //Computes the logarithm of -p(\mathbf{x}_i|z_{ik}=1,\bm{\theta}) but of only those
-      // terms that depend on \alpha
-      // I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value
-      //logarithm due to numerical purposes
-      // computes the - log DirMulti(x_i^m | alpha_k^m), terms not depending on alpha excluded
-      for(s = 0; s < S; s++){
-        Rcpp::NumericVector lambda_ks(Lx[m]);
-        for(l = 0; l < Lx[m]; l++){
-          lambda_ks[l]=lambda_matrix(k, s+l); //lambda_{ks}^m
-        }
-        
-        for (i = 0; i < N; i ++) {
-          // Rcpp::NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
-          // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
-          Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
-          
-          // LngammaLambda0_matrix K x Lx x S
-          double dNegLogEviI = neg_log_evidence_i(data_row, lambda_ks,
-                                                  as<Rcpp::NumericVector>( Rcpp::wrap(LngammaLambda0_matrix_1.slice(s).row(k)) ) );
-          
-          
-          dSum += Z_1(k,s,i)*dNegLogEviI; // dNegLogEviI[k,s] is negative ->  +=
-          
-          dNegLogEviI = neg_log_evidence_i(data_row, Rcpp::rev( lambda_ks ), //alpha_{La-S+s-j+1}
-                                           as<Rcpp::NumericVector>( Rcpp::wrap(LngammaLambda0_matrix_2.slice(s).row(k)) ) );
-          
-          dSum += Z_2(k,s,i)*dNegLogEviI;
-                   
-          
-        } //s
-      } //over K
-    } //over M
-  } //over N
-  
-  
-  
-  
-  
-  for(k = 0; k < K; k++){
-    double piK = W[k]/Rcpp::sum(W);
-    dSum -= log(piK)*dWeightNSF[k];
-  }
-  for(s = 0; s < S; s++){
-    if(xi[s]!=0){
-      dSum -= log(xi[s])*dWeightNKF[s];
-    }
-    
-  }
-  
-  for(f = 0; f < F; f++){
-    if(zeta[f]!=0){
-       dSum -= log(zeta[f])*dWeightNKS[f];
-    }
-  }
-  
-  
-  for (m = 0; m < M; m++) {
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    
-    for (k = 0; k < K; k++) {
-      
-      if ((etah!=0) || (nuh!=0)) {
-        // exp(Lambda_matrix(i, _) are alpha_k, all L elements
-        // diff function in c++ computes the difference of elements of a vector
-        double hkm = sum( diff( exp(Lambda_matrix(k, _)) ) * diff(exp(Lambda_matrix(k, _))));
-        regterm2 += (etah - 1) * log(hkm) - nuh*hkm; // \sum_k^K (etah - 1) * log(hkm) - nuh*hkm;
-      }
-      
-      dL7 += sum(exp(Lambda_matrix(k, _))); // \sum_j^L \alpha_kj^m
-      dL8 += sum(Lambda_matrix(k, _));  //  \sum_j^L \lambda_kj^m
-    } // over K
-  }  // over M
-  dL7 *= -nu; //-nu* \sum_j^L \alpha_kj^m
-  dL8 *= (eta-1); // eta * \sum_j^L \lambda_kj^m SHOULD BE (eta-1)
-  return dSum - dL7 - dL8 - regterm2;
-  //
-  
-}
+
 
 /*Model with flipping only */
 
 // [[Rcpp::export]]
-double neg_log_evidence_lambda_pi_flip(Rcpp::NumericVector lambda, Rcpp::List& lambda_iter, Rcpp::List lparams){
+double neg_log_evidence_lambda_pi_flip(Rcpp::NumericVector lambda, Rcpp::List lparams){
   int i, j, f;
   
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L_x
@@ -930,31 +651,9 @@ double neg_log_evidence_lambda_pi_flip(Rcpp::NumericVector lambda, Rcpp::List& l
   double GAMMA_ITA_H = as<double>(lparams["etah"]);
   double GAMMA_NU_H = as<double>(lparams["nuh"]);
   
-  Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
-  Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
-  
-  Rcpp::List hkm_lb = as<Rcpp::List>(lparams["hkm_lb"]);
-  Rcpp::IntegerVector hkm_lb_index = as<Rcpp::IntegerVector>(lparams["hkm_lb_index"]);
-  
-  
-  
-  Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
-  if (lambda_index[0] < lambda_iter.size()) {
-    lambda_iter[lambda_index[0]]=clone(lambda);
-  }
-  else{
-    Rprintf("lambda_index exceeds lambda_iter vector length!!! lambda_index: %i, lambda_iter.length: %i\n",
-            lambda_index[0], lambda_iter.size());
-  }
-  lambda_index[0] += 1;
-  
   const int L = aanX.ncol(); // L_x
-  // Rcpp::Rcout << "L: "<<L << "\n";
-  
   const int N = aanX.nrow();
-  // Rcpp::Rcout << "N: "<<N << "\n";
   const int F = adPi.nrow();
-  // Rcpp::Rcout << "F: "<<F << "\n";
   
   /*dLogE collects the terms \sum_{n=1}^N \sum_{j=1}^L E[z_i] \log \gamma (x_ij+ alpha_j)
    and \sum_{n=1}^N E[z_i]* lng( \sum_j(x_ij+alpha-j) )*/
@@ -963,7 +662,7 @@ double neg_log_evidence_lambda_pi_flip(Rcpp::NumericVector lambda, Rcpp::List& l
   double dLogEAlpha = 0.0; // \log \gamma ( \sum_{j=1}^L  \alpha_{j} )
   double dSumAlpha = 0.0; // sum of alpha \sum_{j=1}^L \alpha_{j}
   double dSumLambda = 0.0; // sum of lambda?
-  double dHk = 0.0;
+
   double dWeight = 0.0; // \sum_{n=1}^N E(z_i)
   
   Rcpp::NumericVector dWeight_f(N);
@@ -1018,45 +717,18 @@ double neg_log_evidence_lambda_pi_flip(Rcpp::NumericVector lambda, Rcpp::List& l
   } else {
     double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
     
-    if (hkm_lb_index[0] < hkm_lb.size()) {
-      hkm_lb[hkm_lb_index[0]] = hk;
-    }
-    else{
-      Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
-              hkm_lb_index[0], hkm_lb.size());
-    }
-    hkm_lb_index[0] += 1;
-    
-    
     reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
   }
   
-  double retVal = dLogE + dWeight*dLogEAlpha + // complete data likelihood term
+  return dLogE + dWeight*dLogEAlpha + // complete data likelihood term
     GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term;//prior term, ITA corrected to ITA-1 !!!
   
-  //should it be (GAMMA_ITA-1)*dSumLambda???
-  // Rprintf("LB value: %f\n", retVal);
-  
-  
-  
-  if (lb_index[0] < lb.size()) {
-    lb[lb_index[0]] = retVal;
-  }
-  else{
-    Rprintf("lb_index exceeds lb vector length!!! lb_index: %i, lb.length: %i\n",
-            lb_index[0], lb.size());
-  }
-  lb_index[0] += 1;
-  
-  
-  return retVal; 
-  
+
 }
 
 
 // [[Rcpp::export]]
 Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_flip(Rcpp::NumericVector ptLambda,
-                                                      Rcpp::List& lambda_iter,
                                                       Rcpp::List lparams)
 {
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L
@@ -1193,7 +865,6 @@ arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
   const int F = zeta.length();
   
   arma::Cube<double> evidence_matrix(M, K, F); 
-  // Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
   
   Rcpp::NumericVector Lx(M);
   for (m = 0; m < M ; m++) {
@@ -1205,13 +876,10 @@ arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
   
   // Compute lngammaalpha_jkms
   for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
     Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
     arma::Cube<double> LngammaLambda0_matrix(K, Lx[m],F); // lngamma ( \alpha_{jk}  )
     for(k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
       for(j = 0; j < Lx[m]; j++){
-        // Rcpp::Rcout <<"j: "<<j << ", j+s: "<<j+s << "\n";
         const double dAlpha_1 = exp( Lambda_matrix(k, j) );
         const double dAlpha_2 = exp( Lambda_matrix(k, Lx[m] - 1 -j ) );
         LngammaLambda0_matrix(k, j, 0) = gsl_sf_lngamma(dAlpha_1);
@@ -1222,21 +890,17 @@ arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
   } //m
   
   for (i = 0; i < N; i ++) {
-    // Rcpp::Rcout << "i: "<< i << "\n";
     double dSum = 0.0;
     Rcpp::NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
     // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
     for (m = 0; m < M; m++) {
-      // Rcpp::Rcout << "m: "<< m << "\n";
       offset[m] = BIG_DBL; //1.0e9
-      
       Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x Lx matrix
       Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-      // Rcpp::NumericMatrix Ln = as<Rcpp::NumericMatrix>(LngammaLambda0[m]); // K x L lngamma ( \alpha_{jk}^{(m)}  )
       arma::Cube<double> LngammaLambda0_matrix = LngammaLambda0(m); //K x Lx x 2
       Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
       for (k = 0; k < K; k++) {
-        // Rcpp::Rcout << "k: "<< k << "\n";
+
         //Computes the logarithm of -p(\mathbf{x}_i|z_{ik}=1,\bm{\theta}) but of only those
         // terms that depend on \alpha
         // I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value
@@ -1251,48 +915,30 @@ arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
             offset[m] = dNegLogEviI; // offset[m] is the smallest dNegLogEviI over k and f
         }
         evidence_matrix(m, k, 0) = dNegLogEviI; //M x K x 2
-        // Rcpp::Rcout << "evidence 1: "<<  evidence_matrix(m, k, 0) << "\n";
-        
-        //Rcpp::NumericVector lambda_rev =Rcpp::rev( lambda_matrix(k,_) );
-        
-        //Rcpp::Rcout << "Lambda rev " <<  lambda_rev   << "\n";
-        // Rcpp::Rcout << "LngammaLambda0 " <<  Rcpp::wrap(LngammaLambda0_matrix.slice(1).row(k))  << "\n";
+      
         dNegLogEviI = neg_log_evidence_i(data_row, Rcpp::rev( lambda_matrix(k,_) ),
                                                 as<Rcpp::NumericVector>( Rcpp::wrap(LngammaLambda0_matrix.slice(1).row(k)) ) );
         if (dNegLogEviI < offset[m]){ //1.0e9 Can this explode?
           offset[m] = dNegLogEviI; // offset[m] is the smallest dNegLogEviI over k and f
         }
         evidence_matrix(m, k, 1) = dNegLogEviI; //M x K x 2
-        // Rcpp::Rcout << "evidence 2: "<<  evidence_matrix(m, k, 1) << "\n";  
-        //data_row x_i^m 1 x L
-        // lambda_matrix (k, _) log alpha_k^m 1 x L
-        // LngammaLambda0_matrix(k, _) 1 x L lngamma ( \alpha_{jk}^{(m)}  )
-        
-        
-        
+      
+              
       } //over K
     } //over M
-     //Rcpp::Rcout << "i: "<<i << "\n";
+    
     for (k = 0; k < K; k++) {
-       //Rcpp::Rcout << "k: "<<k << "\n";
-      
-        //Rcpp::Rcout << "s: "<<s << "\n";
         Z(k, 0, i) = 0.0; //K x 2 x N
         Z(k, 1, i) = 0.0; //K x 2 x N
         for (m = 0; m < M; m++) {
           
-          Z(k, 0, i) += (-(evidence_matrix(m, k, 0) - offset[m])); //why offset is substracted?? For numerical reasons?
-          Z(k, 1, i) += (-(evidence_matrix(m, k, 1) - offset[m])); //why offset is substracted?? For numerical reasons?
+          Z(k, 0, i) += (-(evidence_matrix(m, k, 0) - offset[m])); 
+          Z(k, 1, i) += (-(evidence_matrix(m, k, 1) - offset[m])); 
         }
-         // Rcpp::Rcout << "Z_0: "<<Z(k, 0, i) << "\n";
-         // Rcpp::Rcout << "Z_1: "<<Z(k, 1, i) << "\n";
         Z(k, 0, i) = W[k]*zeta[0] * exp(Z(k, 0, i)); 
         Z(k, 1, i) = W[k]*zeta[1] * exp(Z(k, 1, i));
-         // Rcpp::Rcout << "Z_0: "<<Z(k, 0, i) << "\n";
-         // Rcpp::Rcout << "Z_1: "<<Z(k, 1, i) << "\n";
         dSum += Z(k, 0, i); //normalization constant
         dSum += Z(k, 1, i); //normalization constant
-         // Rcpp::Rcout << "dSum: "<< dSum << "\n";
      
     } // k
     
@@ -1355,7 +1001,7 @@ double neg_log_likelihood_flip(Rcpp::NumericVector W, Rcpp::NumericVector zeta, 
       } //over j
       LogBAlpha(m, k) -= gsl_sf_lngamma(dSumAlphaK); // LogBAlpha_2 \sum_j^L lng (alpha_jk) -lngamma( \sum_j^L \alpha_jk)
     } // over k
-    LngammaLambda0[m] = Rcpp::clone(LngammaLambda0_matrix); // list of length M
+    LngammaLambda0[m] = LngammaLambda0_matrix; // list of length M
   } // over m
   for (i = 0; i < N; i++) {
     double dProb = 0.0;
@@ -1452,150 +1098,6 @@ double neg_log_likelihood_flip(Rcpp::NumericVector W, Rcpp::NumericVector zeta, 
   //
   
 }
-// [[Rcpp::export]]
-double neg_lower_bound_flip(arma::Cube<double> Z, Rcpp::NumericVector W, Rcpp::NumericVector zeta, 
-                             Rcpp::List Lambda,Rcpp::List data, double eta, double nu,
-                             double etah, double nuh)
-{
-  
-  Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x Lx
-  const int N = temp.nrow();
-  //Rprintf("N: %i \n", N);
-  // Rcpp::Rcout << "N: "<<N << "\n";
-  const int K = W.length();
-  const int F = zeta.length();
-  
-  // Rcpp::Rcout << "K: "<<K << "\n";
-  const int M = data.size();
-  // Rcpp::Rcout << "M: "<<M << "\n";
-  int i, j, k, m, f;
-  
-  
-  Rcpp::NumericVector dWeightNF(K); // dWeightNF
-  Rcpp::NumericVector dWeightNK(F); // dWeightNK
-  
-  double dL7 = 0.0; //-nu* \sum_j^L \alpha_kj^m from prior
-  double dL8 = 0.0; // eta * \sum_j^L \lambda_kj^m from prior
-  double regterm2 = 0.0; // \sum_k^K ((etah - 1) * log(hkm) - nuh*hkm);  form prior
-  
-  // Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
-  
-  Rcpp::NumericVector Lx(M);
-  for (m = 0; m < M ; m++) {
-    temp = as<Rcpp::IntegerMatrix>(data[m]); //N x L matrix
-    Lx[m] = temp.ncol(); //L
-  }
-  
-  //Compute dWeightNK[s]
-  for(f = 0; f < F; f++){
-    dWeightNK[f] = 0.0;
-    for (i = 0; i < N; i++) {
-      for (k = 0; k < K; k++) {
-        dWeightNK[f] += Z(k,f,i); // Z is K x 2 x N
-      }
-    }
-  }
-  
-  
-  for (k = 0; k < K; k++) {
-    dWeightNF[k] = 0.0;
-    for(f = 0; f < F; f++){
-      for (i = 0; i < N; i++) {
-        dWeightNF[k] += Z(k,f,i); // Z is K x 2 x N
-      }
-    }
-  }
-  
-  
-  
-  Rcpp::List LngammaLambda0(M); // lngamma ( \alpha_{jk}^{(m)}  )
-  
-  // Compute lngammaalpha_jkms
-  for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    arma::Cube<double> LngammaLambda0_matrix(K, Lx[m],F); // lngamma ( \alpha_{jk}  )
-    for(k = 0; k < K; k++){
-        // for(f = 0; f < F; f++){
-        for(j = 0; j < Lx[m]; j++){
-          LngammaLambda0_matrix(k, j, 0) = gsl_sf_lngamma( exp(Lambda_matrix(k, j)) );
-          LngammaLambda0_matrix(k, j, 1) = gsl_sf_lngamma( exp(Lambda_matrix(k, Lx[m] -1 -j )) );
-        } //j
-    } //k
-    LngammaLambda0(m) = LngammaLambda0_matrix;
-  } //m
-  
-  double dSum = 0.0;
-  for (m = 0; m < M; m++) {
-    
-    // offset[m] = BIG_DBL; //1.0e9
-    
-    Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x Lx matrix
-    Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x Lx matrix
-    arma::Cube<double> LngammaLambda0_matrix = LngammaLambda0(m); //K x Lx x 2
-    
-    for (k = 0; k < K; k++) {
-      for (i = 0; i < N; i ++) {
-        // Rcpp::NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
-        // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
-        Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
-        
-        // LngammaLambda0_matrix K x Lx x S
-        double dNegLogEviI = neg_log_evidence_i(data_row, lambda_matrix(k,_),
-                                                as<Rcpp::NumericVector>( Rcpp::wrap(LngammaLambda0_matrix.slice(0).row(k)) ) );
-        
-        
-        dSum += Z(k,0,i)*dNegLogEviI; // dNegLogEviI[k,s] is negative ->  +=
-        
-        dNegLogEviI = neg_log_evidence_i(data_row, Rcpp::rev(lambda_matrix(k,_)),
-                                         as<Rcpp::NumericVector>( Rcpp::wrap(LngammaLambda0_matrix.slice(1).row(k)) ) );
-        
-        
-        dSum += Z(k,1,i)*dNegLogEviI; // dNegLogEviI[k,s] is negative ->  +=
-                
-      } //i
-    } //over K
-  } //over M
-  
-  
-  
-  
-  
-  for(k = 0; k < K; k++){
-    double piK = W[k]/Rcpp::sum(W);
-    dSum -= log(piK)*dWeightNF[k];
-  }
-  for(f = 0; f < F; f++){
-    if(zeta[f]!=0){
-      dSum -= log(zeta[f])*dWeightNK[f];
-    }
-    
-  }
-  
-  
-  
-  for (m = 0; m < M; m++) {
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    
-    for (k = 0; k < K; k++) {
-      
-      if ((etah!=0) || (nuh!=0)) {
-        // exp(Lambda_matrix(i, _) are alpha_k, all L elements
-        // diff function in c++ computes the difference of elements of a vector
-        double hkm = sum( diff( exp(Lambda_matrix(k, _)) ) * diff(exp(Lambda_matrix(k, _))));
-        regterm2 += (etah - 1) * log(hkm) - nuh*hkm; // \sum_k^K (etah - 1) * log(hkm) - nuh*hkm;
-      }
-      
-      dL7 += sum(exp(Lambda_matrix(k, _))); // \sum_j^L \alpha_kj^m
-      dL8 += sum(Lambda_matrix(k, _));  //  \sum_j^L \lambda_kj^m
-    } // over K
-  }  // over M
-  dL7 *= -nu; //-nu* \sum_j^L \alpha_kj^m
-  dL8 *= (eta-1); // eta * \sum_j^L \lambda_kj^m SHOULD BE (eta-1)
-  return dSum - dL7 - dL8 - regterm2;
-  //
-  
-}
 
 
 
@@ -1618,7 +1120,7 @@ double neg_lower_bound_flip(arma::Cube<double> Z, Rcpp::NumericVector W, Rcpp::N
  */
 
 // [[Rcpp::export]]
-double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List& lambda_iter, Rcpp::List lparams){
+double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List lparams){
   int i, s, j;
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L_x
   Rcpp::NumericMatrix adPi = as<Rcpp::NumericMatrix>(lparams["pi"]); //S x N
@@ -1627,27 +1129,6 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List& 
   double GAMMA_NU = as<double>(lparams["nu"]);
   double GAMMA_ITA_H = as<double>(lparams["etah"]);
   double GAMMA_NU_H = as<double>(lparams["nuh"]);
-  
-  Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
-  Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
-  
-  Rcpp::List hkm_lb = as<Rcpp::List>(lparams["hkm_lb"]);
-  Rcpp::IntegerVector hkm_lb_index = as<Rcpp::IntegerVector>(lparams["hkm_lb_index"]);
-  
-  Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
-  
-  
-   // Rprintf( "lambda_index: %i, lambda_iter.length: %i\n",
-   //         lambda_index[0], lambda_iter.size());
-  
-   if (lambda_index[0] < lambda_iter.size()) {
-     lambda_iter[lambda_index[0]]=clone(lambda);
-   }
-   else{
-     Rprintf("lambda_index exceeds lambda_iter vector length!!! lambda_index: %i, lambda_iter.length: %i\n",
-               lambda_index[0], lambda_iter.size());
-   }
-  lambda_index[0] += 1;
   
   const int Lx = aanX.ncol(); // L_x
   const int N = aanX.nrow();
@@ -1658,11 +1139,11 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List& 
   double dLogEAlpha_final = 0.0;
   double dSumAlpha = 0.0; // sum of alpha \sum_{j=1}^S \alpha_{j}
   double dSumLambda = 0.0; // sum of lambda?
-  Rcpp::NumericVector dWeight(S); //INITIALIZED
-  Rcpp::NumericVector dAlpha(La); //INITIALIZED
-  Rcpp::NumericMatrix adSumAlphaN(S,N); //INITIALIZED
-  Rcpp::NumericVector dSumAlpha_s(S); //INITIALIZED
-  Rcpp::NumericVector dLogEAlpha(S); //INITIALIZED, initialization not necessary, everything initialized into 0
+  Rcpp::NumericVector dWeight(S); 
+  Rcpp::NumericVector dAlpha(La); 
+  Rcpp::NumericMatrix adSumAlphaN(S,N); 
+  Rcpp::NumericVector dSumAlpha_s(S); 
+  Rcpp::NumericVector dLogEAlpha(S); 
   //Compute dWeight_[s]
   for(s = 0; s < S; s++){
     dSumAlpha_s[s]=0.0;
@@ -1723,40 +1204,13 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List& 
     reg_term = 0.0;
   } else {
     double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
-    
-    if (hkm_lb_index[0] < hkm_lb.size()) {
-      hkm_lb[hkm_lb_index[0]] = hk;
-    }
-    else{
-      Rprintf("hkm_index exceeds hkm vector length!!! hkm_index: %i, hkm.length: %i\n",
-              hkm_lb_index[0], hkm_lb.size());
-    }
-    hkm_lb_index[0] += 1;
-    
-    
     reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
   }
   
+  
   //should it be (GAMMA_ITA-1)*dSumLambda???
-  double returnVal = dLogE + dLogEAlpha_final + // complete data likelihood term
+  return dLogE + dLogEAlpha_final + // complete data likelihood term
     GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term; //prior term
-  // Rcpp::Rcout  << returnVal <<"\n";
-  // Rprintf("LB value: %f\n", returnVal);
-  
-  if (lb_index[0] < lb.size()) {
-    lb[lb_index[0]] = returnVal;
-  }
-  else{
-    Rprintf("lb_index exceeds lb vector length!!! lb_index: %i, lb.length: %i\n",
-            lb_index[0], lb.size());
-  }
-  lb_index[0] += 1;
-  
-  return returnVal; 
-  
-  
-  
-  
   
 }
 
@@ -1771,7 +1225,6 @@ double neg_log_evidence_lambda_pi_shift(Rcpp::NumericVector lambda, Rcpp::List& 
 
 // [[Rcpp::export]]
 Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector ptLambda,
-                                                            Rcpp::List& lambda_iter,
                                                                  Rcpp::List lparams){
   Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x Lx
   Rcpp::NumericMatrix adPi = as<Rcpp::NumericMatrix>(lparams["pi"]); // S x N
@@ -1792,17 +1245,17 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
   const int S = adPi.nrow();
   const int La = Lx + S - 1;
   
-  Rcpp::NumericVector g(La); //gradient INITIALIZED
-  Rcpp::NumericVector adDeriv(La); //derivative for each j INITIALIZED
-  Rcpp::NumericMatrix adStore(S,N); // \sum_j^S x_ij + \sum_j^S \alpha_j INITIALIZED
-  Rcpp::NumericVector adAlpha(La); // INITIALIZED
+  Rcpp::NumericVector g(La); //gradient 
+  Rcpp::NumericVector adDeriv(La); //derivative for each j 
+  Rcpp::NumericMatrix adStore(S,N); // \sum_j^S x_ij + \sum_j^S \alpha_j 
+  Rcpp::NumericVector adAlpha(La); 
   
-  Rcpp::NumericVector dSumStore(La); // \sum_n^N E[z_i]* psi( \sum_j^S x_ij + \sum_j^S \alpha_j ) INITIALIZED
-  Rcpp::NumericVector dStore(S); // sum of alpha over k INITIALIZED
-  Rcpp::NumericVector xStore(N); // sum of x_i over k INITIALIZED
-  Rcpp::NumericVector dWeight_j(La); // dWeight_j INITIALIZED
-  Rcpp::NumericVector dWeight(S); // dWeight INITIALIZED
-  Rcpp::NumericVector dStore_final(La); //INITIALIZED
+  Rcpp::NumericVector dSumStore(La); // \sum_n^N E[z_i]* psi( \sum_j^S x_ij + \sum_j^S \alpha_j )
+  Rcpp::NumericVector dStore(S); // sum of alpha over k 
+  Rcpp::NumericVector xStore(N); // sum of x_i over k 
+  Rcpp::NumericVector dWeight_j(La); // dWeight_j 
+  Rcpp::NumericVector dWeight(S); // dWeight 
+  Rcpp::NumericVector dStore_final(La); 
   
   
   //Compute dWeight_[s]
@@ -1821,28 +1274,20 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
     adAlpha[j] = exp(ptLambda[j]);
     dSumStore[j] = 0.0;
     dWeight_j[j] = 0.0;
-    //Rcpp::Rcout << "j: " << j <<" ";
     for(i = 0; i < N; i++){
         for(s = (j - Lx + 1); s < (j + 1); s++){
           if(s > -1 && s < S ){
-            //if(i==0){
-            // Rcpp::Rcout << "s: " << s <<" ";
-            //}
             dWeight_j[j] += adPi(s,i);
           } //if
           
         } //s
       } //i
-    // Rcpp::Rcout  <<"\n";
   } //j
   
   for(s = 0; s < S; s++){
-    // Rcpp::Rcout << "s: " << s <<" ";
     for(k = 0; k < Lx; k++ ){
-      // Rcpp::Rcout  << k+s <<" ";
       dStore[s] += adAlpha[k+s];
     }
-    // Rcpp::Rcout <<"\n";
   }
   
   
@@ -1871,8 +1316,7 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
         } //i
       } //if true s
     } //s
-    // Rcpp::Rcout <<"\n";
-  } //j
+   } //j
   
   for(j = 0; j < La; j++){
     for(s = (j - Lx + 1); s < (j + 1); s++){
@@ -1928,8 +1372,7 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
     gnorm += pow(g[j], 2.0);
   }
   gnorm=sqrt(gnorm);
-  // Rprintf("Gradient norm: %f\n", gnorm);
-  
+    
   if (gradient_index[0] < gradient.size()) {
     gradient[gradient_index[0]] = gnorm;
   }
@@ -1969,8 +1412,7 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
   const int S = xi.length();
   
   arma::Cube<double> evidence_matrix(M, K, S); 
-  // Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
-
+ 
   Rcpp::NumericVector Lx(M);
   Rcpp::NumericVector La(M);
   for (m = 0; m < M ; m++) {
@@ -1983,15 +1425,11 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
 
   // Compute lngammaalpha_jkms
   for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
+   Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
     arma::Cube<double> LngammaLambda0_matrix(K, Lx[m],S); // lngamma ( \alpha_{jk}  )
     for(k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
       for(s = 0; s < S; s++){
-        // Rcpp::Rcout << "s: "<<s << "\n";
         for(j = 0; j < Lx[m]; j++){
-          // Rcpp::Rcout <<"j: "<<j << ", j+s: "<<j+s << "\n";
           const double dAlpha = exp(Lambda_matrix(k, j+s));
           LngammaLambda0_matrix(k, j, s) = gsl_sf_lngamma(dAlpha);
         } //j
@@ -2011,7 +1449,6 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
 
       Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x Lx matrix
       Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-      // Rcpp::NumericMatrix Ln = as<Rcpp::NumericMatrix>(LngammaLambda0[m]); // K x L lngamma ( \alpha_{jk}^{(m)}  )
       arma::Cube<double> LngammaLambda0_matrix = LngammaLambda0(m); //K x Lx x S
       Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
       for (k = 0; k < K; k++) {
@@ -2037,22 +1474,13 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
           evidence_matrix(m, k, s) = dNegLogEviI; //M x K x S
         
         } //s
-        //data_row x_i^m 1 x L
-        // lambda_matrix (k, _) log alpha_k^m 1 x L
-        // LngammaLambda0_matrix(k, _) 1 x L lngamma ( \alpha_{jk}^{(m)}  )
-
-
-        
       } //over K
     } //over M
 
     for (k = 0; k < K; k++) {
-      //Rcpp::Rcout << "k: "<<k << "\n";
       for(s = 0; s < S; s++){
-        //Rcpp::Rcout << "s: "<<s << "\n";
         Z(k, s, i) = 0.0; //K x S x N
         for (m = 0; m < M; m++) {
-          //Rcpp::Rcout << "m: "<<m << "\n";
           Z(k, s, i) += (-(evidence_matrix(m, k, s) - offset[m])); //why offset is substracted?? For numerical reasons?
         }
         
@@ -2089,11 +1517,8 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
    
   Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x Lx
   const int N = temp.nrow();
-    // Rcpp::Rcout << "N: "<<N << "\n";
   const int K = W.length();
-    // Rcpp::Rcout << "K: "<<K << "\n";
   const int M = data.size();
-    // Rcpp::Rcout << "M: "<<M << "\n";
   int i, j, k, m, s;
   
   Rcpp::NumericVector Lx(M);
@@ -2120,10 +1545,8 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
   double regterm1 = 0.0; //M * K * (etah * log(nuh) - gsl_sf_lngamma(etah)); from prior
   double regterm2 = 0.0; // \sum_k^K ((etah - 1) * log(hkm) - nuh*hkm);  form prior
   
-  //const int S = adPi.n_rows;
   arma::Cube<double> LogBAlpha(M,K,S); 
-  //NumericMatrix LogBAlpha(M, K); // // \sum_j^L lng (alpha_jk) -lngamma( \sum_j^L \alpha_jk)
-  
+    
   Rcpp::NumericVector dSumAlphaK(S);
   
   for (m = 0; m < M; m++) {
@@ -2148,8 +1571,6 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
     LngammaLambda0(m) = LngammaLambda0_matrix; // list of length M
   } // over m
   
-    // Rcpp::Rcout << "LogBAlpha: "<< LogBAlpha(0,0,10) << "\n";
-  
   for (i = 0; i < N; i++) {
     double dProb = 0.0;
    
@@ -2164,8 +1585,7 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
       Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]);
       Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]);
       arma::Cube<double> LngammaLambda0_matrix = LngammaLambda0(m); //size K x Lx x S
-      // NumericMatrix LngammaLambda0_matrix = as<NumericMatrix>(LngammaLambda0[m]); // lng (alpha_jk) K x L matrix
-      
+           
       for (j = 0; j < Lx[m]; j++) {
         dSum += data_matrix(i, j); // dSum_m, this is J_i^m
         // dFactor does not depend on parameters, why computed?
@@ -2196,8 +1616,6 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
           if (LogStore(m, k,s) > offset(m))
             offset(m) = LogStore(m, k,s); //offset will be the largest of LogStore(m,:,:), or should it be largest of LogStore(m,:,k)??
         } //over S
-        
-        // Rcpp::Rcout << "LogStore: "<< LogStore(0,0,10) << "\n";
       } //over K
     } //over M
     
@@ -2206,25 +1624,17 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
       dProb_S[k]=0.0;
       for (s = 0; s < S; s++) {
         
-        // dProb_S[k] += xi[s]*exp( sum( Rcpp::wrap( LogStore(arma::span::all,arma::span(k),arma::span(s) ))) - sum(offset) ); //sum of column k over m rows
         dProb_S[k] += xi[s]*exp( sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(s).col(k) ) )) - sum(offset) ); //sum of column k over m rows
-        // Rcpp::Rcout << "dProb_S: "<< dProb_S[k] << "\n";
-        
       }
       // normalize mixing weights
-      // Rcpp::Rcout << "W[k]: "<< W[k] << "\n";
-      
       double piK = W[k]/Rcpp::sum(W);
       
-      // Rcpp::Rcout << "piK: "<< piK << "\n";
       dProb += piK*dProb_S[k]; //sum of column k over m rows
       
-      // Rcpp::Rcout << "dProb: "<< dProb << "\n";
     } // k
     
     
     dRet += log(dProb)+Rcpp::sum(offset); //logarithm of the normalization term, sum over all n
-    // Rcpp::Rcout << "dRet: "<< dRet << "\n";
     
   } //over N
   
@@ -2261,186 +1671,4 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
   
 }
 
-/* DONE Function whose convergence is checked in each EM iteration
- * Computes the negative lower bounds, terms only depending on theta and cluster assignment
- * W weights 1xK, these are \pi_k values
- * lambda list of length M, these are K x La matrices
- * xi are the shift state probabilities
- * binned.data list of length M, NxLx matrices
- */
 
-// [[Rcpp::export]]
-double neg_lower_bound_shift(arma::Cube<double> Z, Rcpp::NumericVector W, Rcpp::NumericVector xi, 
-                             Rcpp::List Lambda,Rcpp::List data, double eta, double nu,
-                                double etah, double nuh, int S)
-{
-  
-  Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x Lx
-  const int N = temp.nrow();
-  //Rprintf("N: %i \n", N);
-   // Rcpp::Rcout << "N: "<<N << "\n";
-  const int K = W.length();
-   // Rcpp::Rcout << "K: "<<K << "\n";
-  const int M = data.size();
-   // Rcpp::Rcout << "M: "<<M << "\n";
-  int i, j, k, m, s, l;
-  
- 
-  Rcpp::NumericVector dWeightNS(K); // dWeightNS
-  Rcpp::NumericVector dWeightNK(S); // dWeightNK
-  
-  double dL7 = 0.0; //-nu* \sum_j^L \alpha_kj^m from prior
-  double dL8 = 0.0; // eta * \sum_j^L \lambda_kj^m from prior
-  double regterm2 = 0.0; // \sum_k^K ((etah - 1) * log(hkm) - nuh*hkm);  form prior
-  
-  // Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
-  
-  Rcpp::NumericVector Lx(M);
-  Rcpp::NumericVector La(M);
-  for (m = 0; m < M ; m++) {
-    temp = as<Rcpp::IntegerMatrix>(data[m]); //N x L matrix
-    Lx[m] = temp.ncol(); //L
-    La[m] = Lx[m] + S - 1; //assume all Lx are the same
-  }
-  
-  //Compute dWeightNK[s]
-  for(s = 0; s < S; s++){
-    dWeightNK[s] = 0.0;
-    for (i = 0; i < N; i++) {
-      for (k = 0; k < K; k++) {
-        dWeightNK[s] += Z(k,s,i); // Z is K x S x N
-        }
-    }
-    // Rcpp::Rcout << "dWeightNK[s]: "<<dWeightNK[s] << "\n";
-  }
-  
-  
-  for (k = 0; k < K; k++) {
-    dWeightNS[k] = 0.0;
-    for(s = 0; s < S; s++){
-      for (i = 0; i < N; i++) {
-         dWeightNS[k] += Z(k,s,i); // Z is K x S x N
-        
-      }
-    }
-    // Rcpp::Rcout << "dWeightNS[k]: "<<dWeightNS[k] << "\n";
-  }
-  
-  
-  
-  Rcpp::List LngammaLambda0(M); // lngamma ( \alpha_{jk}^{(m)}  )
-  
-  // Compute lngammaalpha_jkms
-  for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    arma::Cube<double> LngammaLambda0_matrix(K, Lx[m],S); // lngamma ( \alpha_{jk}  )
-    for(k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
-      for(s = 0; s < S; s++){
-        // Rcpp::Rcout << "s: "<<s << "\n";
-        for(j = 0; j < Lx[m]; j++){
-          // Rcpp::Rcout <<"j: "<<j << ", j+s: "<<j+s << "\n";
-          const double dAlpha = exp(Lambda_matrix(k, j+s));
-          LngammaLambda0_matrix(k, j, s) = gsl_sf_lngamma(dAlpha);
-        } //j
-      } //s
-    } //k
-    LngammaLambda0(m) = LngammaLambda0_matrix;
-  } //m
-  
-  
-  
-
-
-  double dSum = 0.0;
-  for (m = 0; m < M; m++) {
-      
-      // offset[m] = BIG_DBL; //1.0e9
-      
-      Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x Lx matrix
-      Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-      // Rcpp::NumericMatrix Ln = as<Rcpp::NumericMatrix>(LngammaLambda0[m]); // K x L lngamma ( \alpha_{jk}^{(m)}  )
-      arma::Cube<double> LngammaLambda0_matrix = LngammaLambda0(m); //K x Lx x S
-     
-      for (k = 0; k < K; k++) {
-        
-      //Computes the logarithm of -p(\mathbf{x}_i|z_{ik}=1,\bm{\theta}) but of only those
-      // terms that depend on \alpha
-      // I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value
-      //logarithm due to numerical purposes
-      // computes the - log DirMulti(x_i^m | alpha_k^m), terms not depending on alpha excluded
-          for(s = 0; s < S; s++){
-            Rcpp::NumericVector lambda_ks(Lx[m]);
-            for(l = 0; l < Lx[m]; l++){
-              lambda_ks[l]=lambda_matrix(k, s+l); //lambda_{ks}^m
-            }
-            
-             for (i = 0; i < N; i ++) {
-                // Rcpp::NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
-                // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
-                Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
-                
-              // LngammaLambda0_matrix K x Lx x S
-              double dNegLogEviI = neg_log_evidence_i(data_row, lambda_ks,
-                                                      as<Rcpp::NumericVector>( Rcpp::wrap(LngammaLambda0_matrix.slice(s).row(k)) ) );
-              
-              
-              dSum += Z(k,s,i)*dNegLogEviI; // dNegLogEviI[k,s] is negative ->  +=
-              // Rcpp::Rcout << "dSum: "<<dSum << "\n";
-              // if (dNegLogEviI < offset[m]) //1.0e9 Can this explode?
-              //   offset[m] = dNegLogEviI; // offset[m] is the smallest dNegLogEviI over k and s
-              //evidence_matrix(m, k, s) = dNegLogEviI; //M x K x S
-              
-              
-            } //s
-            //data_row x_i^m 1 x L
-            // lambda_matrix (k, _) log alpha_k^m 1 x L
-            // LngammaLambda0_matrix(k, _) 1 x L lngamma ( \alpha_{jk}^{(m)}  )
-            
-            
-            
-          } //over K
-      
-    } //over M
-  } //over N
-  
- 
-  
-  
-    
-  for(k = 0; k < K; k++){
-    double piK = W[k]/Rcpp::sum(W);
-    dSum -= log(piK)*dWeightNS[k];
-  }
-  for(s = 0; s < S; s++){
-    if(xi[s]!=0){
-      dSum -= log(xi[s])*dWeightNK[s];
-      }
-    
-  }
-    
-  
-  
-  for (m = 0; m < M; m++) {
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    
-    for (k = 0; k < K; k++) {
-      
-      if ((etah!=0) || (nuh!=0)) {
-        // exp(Lambda_matrix(i, _) are alpha_k, all L elements
-        // diff function in c++ computes the difference of elements of a vector
-        double hkm = sum( diff( exp(Lambda_matrix(k, _)) ) * diff(exp(Lambda_matrix(k, _))));
-        regterm2 += (etah - 1) * log(hkm) - nuh*hkm; // \sum_k^K (etah - 1) * log(hkm) - nuh*hkm;
-      }
-      
-      dL7 += sum(exp(Lambda_matrix(k, _))); // \sum_j^L \alpha_kj^m
-      dL8 += sum(Lambda_matrix(k, _));  //  \sum_j^L \lambda_kj^m
-    } // over K
-  }  // over M
-  dL7 *= -nu; //-nu* \sum_j^L \alpha_kj^m
-  dL8 *= (eta-1); // eta * \sum_j^L \lambda_kj^m SHOULD BE (eta-1)
-  return dSum - dL7 - dL8 - regterm2;
-  //
-  
-}

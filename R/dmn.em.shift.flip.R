@@ -1,6 +1,6 @@
 dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M, K, Lx,  N, verbose, 
                    maxNumOptIter, binned.data, eta, nu, etah, nuh, numOptRelTol, 
-                   EM.maxit, EM.threshold, method="BFGS", hessian=FALSE, optim.options=NULL) {
+                   EM.maxit, EM.threshold,  hessian=FALSE, optim.options=NULL) {
   
   
   Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
@@ -36,10 +36,6 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   }
   
   Ez=Ez2
-  
-  Ez_list=list()
-  Ez_list[[1]]=data.table::copy(Ez)
-  
   #lambda is log(alpha)
   alpha <- lapply(alpha, function(a){a[a <= 0] <- 1e-6;a})
   lambda <- lapply(alpha, log) #natural logarithm by default
@@ -48,8 +44,6 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   Ez_final <- array(0,dim=c(K,S,2,N))
   Ez_final[,,1,]=Ez[[1]]
   Ez_final[,,2,]=Ez[[2]]
-  
-  
   weights <- colSums( t(apply(Ez_final,c(1,4),sum)) )  #initial values for \bm{\pi}
   EM.diagnostics <- data.frame()
   
@@ -63,23 +57,14 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
                          width=40,
                          style=3)
   }
-  lambda_optim_message<-vector(mode = 'list', M)
-  alpha_list<-vector(mode = 'list', M)
-  
-  
+    
   #Initialize the lambda values by optimizing Q wrt the lambda values
   for (m in 1:M) { #over data types
-    lambda_optim_message[[m]]<-list()
-    alpha_list[[m]]<-list()
-    
     for (k in 1:K) { #over clusters
       if (verbose)
         setTxtProgressBar(pb, (m-1)*K+k)
       hkm <- vector(mode = 'list', maxNumOptIter+1)
-      hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
       gradient<- vector(mode = 'list', maxNumOptIter+1)
-      lb <- vector(mode = 'list', maxNumOptIter+1)
-      lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
       #the lambda_{kj}^{(m)} can be optimized for each k and m separately
       
       Ez_k=array(0, dim=c(S,2,N))
@@ -90,24 +75,18 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
                                      data=binned.data[[m]],
                                      Z=Ez_k,
                                      hkm=hkm,
-                                     hkm_lb=hkm_lb,
                                      gradient=gradient,
-                                     lb=lb,
-                                     lambda_iter=lambda_iter,
                                      eta=eta,
                                      nu=nu,
                                      etah=etah,
                                      nuh=nuh,
                                      verbose=verbose,
                                      MAX_GRAD_ITER=maxNumOptIter,
-                                     reltol=numOptRelTol, hessian=hessian, 
-                                     method=method, optim.options=optim.options)
-        
-    
-      
-      alpha_list[[m]][[k]] =exp( do.call(rbind,lambda_iter))
+                                     reltol=numOptRelTol, 
+                                     hessian=hessian, 
+                                     optim.options=optim.options)
+            
       hkm <- unlist(hkm)
-      hkm_lb <- unlist(hkm_lb)
       gradient <- unlist(gradient)
       hkm <- data.frame(Datatype=names(binned.data)[m],
                         Component=k,
@@ -119,13 +98,9 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
       if(hessian==TRUE){
         hkm$detH=det(optim.result$hessian)
       }
-      
-      
       EM.diagnostics <- rbind(EM.diagnostics, hkm)
-      
       lambda[[m]][k,] <-optim.result$par
-      lambda_optim_message[[m]][[k]]<-optim.result
-      
+            
     }
   } #initialization ends
   
@@ -138,21 +113,8 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   iter <- 0
   
   last.nll <- .Machine$double.xmax
-  last.nLB <- .Machine$double.xmax
-  
-  nll.change <- .Machine$double.xmax #1.797693e+308
-  nLB.change <- .Machine$double.xmax #1.797693e+308
-  
   real.change<- .Machine$double.xmax #1.797693e+308
-  nLB.real.change <- .Machine$double.xmax #1.797693e+308 
-  
-  EM_lambda_optim_message <- vector(mode = 'list', EM.maxit+1)
-  EM_lambda_optim_message[[1]]<- lambda_optim_message
-  
-  EM_alpha_list<- vector(mode = 'list', EM.maxit+1)
-  EM_alpha_list[[1]]=alpha_list
-  
-  nLB_list<- vector(mode = 'list', EM.maxit+1)
+
   nll_list<- vector(mode = 'list', EM.maxit+1)
   
   nll_iter=1
@@ -160,20 +122,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   last.nll <- nll_list[[nll_iter]]
   nll_iter=nll_iter+1
   
-  nLB_iter=1
-  nLB_list[[nLB_iter]] <- neg_lower_bound_shift_flip(Ez, weights, xi, zeta, lambda, binned.data, eta, nu, etah, nuh, S)
-  last.nLB <- nLB_list[[nLB_iter]]
-  nLB_iter=nLB_iter+1
-  
-  nll.change_list<- vector(mode = 'list', EM.maxit+1)
-  nLB.change_list<- vector(mode = 'list', EM.maxit+1)
-  
-  #E-step
-  #M-step
-  #shifting and flipping, one needs to write separate EM-loops for (shift=false, flip=false), 
-  #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
-  #4 different em-functions
-  while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
+  while ((iter < EM.maxit) && (real.change > EM.threshold)) {
     
     if (verbose)
       cat('Calculating Ez values...\n')
@@ -183,7 +132,6 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
     # returns K x N matrix Z
     #why offset subtracted?
     Ez <- calc_z_shift_flip(Ez, binned.data, weights, xi, zeta,lambda)
-    Ez_list[[iter+2]]=data.table::copy(Ez)
     stopifnot(!is.na(Ez), !is.infinite(unlist(Ez)))
     
     #Computes M-step, same for lambda as the EM initialization
@@ -197,21 +145,14 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
                            width=40,
                            style=3)
     }
-    lambda_optim_message<-vector(mode = 'list', M)
-    alpha_list<-vector(mode = 'list', M)
     for (m in seq_len(M)) {
-      lambda_optim_message[[m]]<-list()
-      alpha_list[[m]]<-list()
       for (k in seq_len(K)) {
         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
         
         
         hkm <- vector(mode = 'list', maxNumOptIter+1)
-        hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
         gradient<- vector(mode = 'list', maxNumOptIter+1)
-        lb <- vector(mode = 'list', maxNumOptIter+1)
-        lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
         #the lambda_{kj}^{(m)} can be optimized for each k and m separately
         Ez_k=array(0, dim=c(S,2,N))
         Ez_k[,1,]=Ez[[1]][k,,]
@@ -220,31 +161,21 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
                                                   data=binned.data[[m]],
                                                   Z=Ez_k,
                                                   hkm=hkm,
-                                                  hkm_lb=hkm_lb,
                                                   gradient=gradient,
-                                                  lb=lb,
-                                                  lambda_iter=lambda_iter,
                                                   eta=eta,
                                                   nu=nu,
                                                   etah=etah,
                                                   nuh=nuh,
                                                   verbose=verbose,
                                                   MAX_GRAD_ITER=maxNumOptIter,
-                                                  reltol=numOptRelTol, hessian=hessian, 
-                                                  method=method, optim.options=optim.options)
+                                                  reltol=numOptRelTol, 
+                                                  hessian=hessian, 
+                                                  optim.options=optim.options)
         
-        
-        
-        alpha_list[[m]][[k]]=exp( do.call(rbind,lambda_iter))
+
         lambda[[m]][k,] <-optim.result$par
-        lambda_optim_message[[m]][[k]]<-optim.result
-        
-        
-      
-        
         
         hkm <- unlist(hkm)
-        hkm_lb <- unlist(hkm_lb)
         gradient <- unlist(gradient)
         hkm <- data.frame(Datatype=names(binned.data)[m],
                           Component=k,
@@ -258,9 +189,6 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
         EM.diagnostics <- rbind(EM.diagnostics, hkm)
       }
     }
-    #save.image("/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/DMM-private-master-devel-works/shif.flip.debugging.RData")
-    EM_lambda_optim_message[[iter+2]]<- lambda_optim_message
-    EM_alpha_list[[iter+2]] <- alpha_list
     
     stopifnot(!is.na(unlist(lambda)), !is.infinite(unlist(lambda)))
     
@@ -283,15 +211,8 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
     nll_list[[nll_iter]]<-nll
     nll_iter=nll_iter+1
     
-    nLB <- neg_lower_bound_shift_flip(Ez, weights, xi, zeta,lambda,
-                                      binned.data, eta, nu,
-                                      etah, nuh, S)
-    stopifnot(!is.na(nLB), !is.infinite(nLB))
-    nLB_list[[nLB_iter]]=nLB
-    nLB_iter=nLB_iter+1
     
     real.change=last.nll-nll #This needs to be positive
-    nLB.real.change=last.nLB-nLB
     
     if(real.change < -numOptRelTol){
       print("Warning: Neg.LL does not decrease!!!")
@@ -301,66 +222,22 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
       print("Warning: Neg.LB does not decrease!!!")
     }
     
-    nll.change <- abs(real.change)
-    nLB.change <- abs(nLB.real.change)
-    
-    nll.change_list[[iter+1]]<-nll.change
-    nLB.change_list[[iter+1]]<-nLB.change
     
     last.nll <- nll
-    last.nLB <- nLB
     
     iter <- iter+1
     
     if (verbose){
-      print(paste('--> EM Iteration:', iter, 'Neg.LL change (absolute):', round(nll.change, -log10(numOptRelTol)) ))
+   
       print(paste('--> EM Iteration:', iter, 'Neg.LL change (real):', round(real.change, -log10(numOptRelTol)) ))
-      print(paste('--> EM Iteration:', iter, 'Neg.LB change (absolute):', round(nLB.change, -log10(numOptRelTol)) ))
-      print(paste('--> EM Iteration:', iter, 'Neg.LB change (real):', round(nLB.real.change, -log10(numOptRelTol)) ))
-      print(paste0("Neg.LL ",round(nll,-log(numOptRelTol)) ))
-      print(paste0("Neg.LB ",round(last.nLB, -log(numOptRelTol)) ))
+      print(paste0("Neg.LL ",round(nll,-log10(numOptRelTol)) ))
+      
     }
   } #EM loop ends
   
   
-  # Model selection
-  # hessian
-  #if (verbose)
-  #  cat("  Hessian\n")
-
+  
   nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
-  nLB.data<-data.frame(iter=which(sapply(nLB_list, length)!=0), nLB=unlist(nLB_list[which(sapply(nLB_list, length)!=0)]))
-  
-  #   err <- matrix(0, K, S)
-  # logDet <- 0
-  # 
-  # for (m in 1:M) {
-  #   for (k in 1:K) {
-  #     if (k > 1) #Why start adding from index k=2???? Cause e.g. weight \pi_1 depends on the rest of the weights (they sum up to one)
-  #       logDet <- logDet + 2.0 * log(N) - log(weights[k]) #unnormalized weights, why this added? This is the log determinant of the first block in hessian, terms corresponding to \pi_k
-  #     #The computation of Hessian misses the regularization prior terms?
-  #     
-  #     hess <- hessian(lambda[[m]][k, ], Ez[k, ], binned.data[[m]], nu) #LxL matrix
-  #     #lambda[[m]][k, ], 1xS
-  #     #Ez[k, ], 1x1000
-  #     #binned.data[[m]], 1000xS
-  #     #nu 1
-  #     ## det(H)=det(L)det(U). LU is the lower-upper decomposition of H. L is a lower triangular matrix, U is upper triangular matrix
-  #     ##The determinant of a lower triangular matrix (or an upper triangular matrix) is the product of the diagonal entries.
-  #     luhess <- Matrix::lu(hess) #LU decomposition
-  #     invHess <- Matrix::solve(luhess) #inverse of Hessian matrix
-  #     #       err[k, ] <- diag(invHess)
-  #     #L has only ones in the diagonal so its determinant not computed
-  #     #Why absolute, the determinant can be also negative?    
-  #     #diagonal elements of U matrix
-  #     #should this be det(as.matrix(Matrix::expand(luhess)$P))*Matrix::diag( Matrix::expand(luhess)$U)
-  #     #Is the final determinant always positive, should be if we are in the extreme value
-  #     #if the determinant is negative, this is a saddle point
-  #     #determinant can not be zero ->
-  #     logDet <- logDet + sum( log( abs( Matrix::diag( Matrix::expand(luhess)$U ) ) ) )
-  #   }
-  # }
-  
   P <- K*sum(La)+K-1 #k=S x K x M + (K-1) This should change for different every M_k?
   #gof.laplace is -log p(X|M_k) 
   #gof.laplace <- last.nll + 0.5 * logDet - 0.5 * P * log(2.0 * pi); ## last.nll given by neg_log_likelihood, this is approx. -log(X|M_k)
@@ -373,8 +250,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   
   result$GoodnessOfFit <- gof
   
-  result$Ez_list <- Ez_list
-  
+   
   Ez_final <- array(0,dim=c(K,S,2,N))
   Ez_final[,,1,]=Ez[[1]]
   Ez_final[,,2,]=Ez[[2]]
@@ -382,13 +258,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   
   result$Group <- t(apply(Ez_final,c(1,4),sum))
   result$nll.data=nll.data
-  result$nLB.data=nLB.data
-  result$EM_lambda_optim_message=EM_lambda_optim_message
-  result$EM_alpha_list=EM_alpha_list
-  
-  
-  
-  result$Mixture <- list(Weight=weights/N)
+ result$Mixture <- list(Weight=weights/N)
   
   EM.diagnostics <- plyr::ddply(EM.diagnostics, c('Datatype', 'Component', 'EM.iter'),
                                 transform, NO.iter.count=length(hkm), NO.iter=seq_along(hkm))
@@ -405,8 +275,6 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
   
   #add shifting information
-  
-  
   test_func <- function(a){
     which(a==max(a), arr.ind=TRUE)
   }
@@ -416,9 +284,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   s = ind[,2]
   learned.flip.states = ind[,3]
   
-  #result$Group_ind=k 
-  #result$Shift_ind=s
-  
+    
   shift.vector=seq(-floor(S/2),floor(S/2),1)*bin.width
   learned.shift.amounts=shift.vector[s]
   
@@ -434,17 +300,9 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
         unshifted.binned.data[[m]][i,]=binned.data[[m]][i, seq((S-s[i]+1) ,(Lx[[m]]-s[i]+1),1)]
       }
       else{
-        # print(paste0("s: ", s[i], " ", seq((Lx[[m]]-(S-s[i])),(S-s[i]+1) ,-1)))
-        # print(s[i])
-        # print(seq((Lx[[m]]-(S-s[i])),(S-s[i]+1) ,-1))
-        # print(unshifting_window)
-        # print( length(seq((Lx[[m]]-(S-s[i])),(S-s[i]+1) ,-1)))
         unshifted.binned.data[[m]][i,]= rev(binned.data[[m]][i, seq(s[i],(Lx[[m]]-(S-s[i])) ,1)]) 
       }
     }
-    
-    
-    
     
     rownames(unshifted.binned.data[[m]]) <- paste0('loci', seq_len(N))
     colnames(unshifted.binned.data[[m]]) <- paste0('pos', seq_len(unshifting_window))
@@ -452,8 +310,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   
   attr(unshifted.binned.data, 'shifts') <- s
   attr(unshifted.binned.data, 'flips') <- learned.flip.states
-  result$Data <- unshifted.binned.data #shifted and ata
-  print("dmn.em.shift.flip finished")
+  result$Data <- unshifted.binned.data #reshifted and reflipped data
   result
   
 }

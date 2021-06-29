@@ -6,11 +6,7 @@ setClass("DMN",
                                   Ez="array",
                                   EM.diagnostics="data.frame",
                                   Data="list",
-                                  nll.data="data.frame",
-                                  nLB.data="data.frame",
-                                  EM_lambda_optim_message="list",
-                                  EM_alpha_list="list",
-                                  Ez_list="list"))
+                                  nll.data="data.frame"))
 
 .DMN <-
     function(goodnessOfFit, group, mixture, fit, ...)
@@ -124,11 +120,7 @@ dmn <-
           EM.diagnostics <- EM.diagnostics
           Data <- Data
           nll.data <- nll.data
-          nLB.data <- nLB.data
           Ez <- Ez
-          EM_lambda_optim_message <- EM_lambda_optim_message
-          EM_alpha_list <- EM_alpha_list
-          Ez_list <- Ez_list
       })
       with(ans, .DMN(goodnessOfFit=GoodnessOfFit,
                      group=Group,
@@ -137,11 +129,7 @@ dmn <-
                      EM.diagnostics=EM.diagnostics,
                      Data=Data,
                      nll.data=nll.data,
-                     nLB.data=nLB.data,
-                     Ez=Ez,
-                     EM_lambda_optim_message=EM_lambda_optim_message,
-                     EM_alpha_list=EM_alpha_list,
-                     Ez_list=Ez_list))
+                     Ez=Ez))
     } #repet.func ends
 
     if (length(K) == 1) {

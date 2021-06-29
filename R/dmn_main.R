@@ -54,7 +54,7 @@
 #Computes the value for one cluster k and datatype m. There might be errors(regularization term incorrect,
 #not all alpha terms included), check
 #'
-optimise_lambda_k <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, lambda_iter, eta, nu,
+optimise_lambda_k <- function(LambdaK, data, Z, hkm, gradient, eta, nu,
                               etah, nuh, method='BFGS',
                               verbose=FALSE, MAX_GRAD_ITER=1000,
                               reltol = 1e-12, optim.options=NULL, hessian=FALSE) {
@@ -64,39 +64,21 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, lambd
   }
   
   hkm_index <- vector(mode='integer', 1)
-  hkm_lb_index <- vector(mode='integer', 1)
   gradient_index <- vector(mode='integer', 1)
-  lb_index <- vector(mode='integer', 1)
-  lambda_index <- vector(mode='integer', 1)
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                 hkm=hkm, hkm_lb=hkm_lb, gradient=gradient, lb=lb,hkm_index=hkm_index,
-                 hkm_lb_index=hkm_lb_index,gradient_index=gradient_index,
-                 lb_index= lb_index, lambda_index=lambda_index)
+                 hkm=hkm, gradient=gradient, hkm_index=hkm_index, gradient_index=gradient_index)
   
   fn=neg_log_evidence_lambda_pi
-  gr=NULL
-  if(method=="BFGS" || method=="CG"){
-    gr=neg_log_derive_evidence_lambda_pi
-  }
-  
+  gr=neg_log_derive_evidence_lambda_pi
   
   optim.result <- optim(LambdaK, fn=fn,
-                        gr=gr, lambda_iter,params,
+                        gr=gr, params,
                         method=method, control = optim.options, hessian=hessian)
 
   if(optim.result$convergence != 0){
     warning('!!!!! Numerical Optimization did not converge !!!!!!!\n')
     if(optim.result$convergence == 1){
       warning('!!!!! iteration limit maxit had been reached !!!!!!!\n')
-    }
-    if(optim.result$convergence == 10){
-      warning('!!!!! degeneracy of the Nelder–Mead simplex !!!!!!!\n')
-    }
-    if(optim.result$convergence == 51){
-      warning('!!!!! warning from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    if(optim.result$convergence == 52){
-      warning('!!!!! error from the "L-BFGS-B" method !!!!!!!\n')
     }
     
   }
@@ -125,7 +107,7 @@ optimise_lambda_k <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, lambd
 #'
 #' @examples
 
-optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, lambda_iter, eta, nu,
+optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, gradient, eta, nu,
                                          etah, nuh, method='BFGS',
                                          verbose=FALSE, MAX_GRAD_ITER=1000,
                                          reltol = 1e-12, hessian=FALSE, optim.options=NULL) {
@@ -135,22 +117,14 @@ optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb,
   }
   
   hkm_index <- vector(mode='integer', 1)
-  hkm_lb_index <- vector(mode='integer', 1)
   gradient_index <- vector(mode='integer', 1)
-  lb_index <- vector(mode='integer', 1)
-  lambda_index <- vector(mode='integer', 1)
   
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                 hkm=hkm, hkm_lb=hkm_lb, gradient=gradient, lb=lb,hkm_index=hkm_index,
-                 hkm_lb_index=hkm_lb_index,gradient_index=gradient_index,
-                 lb_index= lb_index, lambda_index=lambda_index)
+                 hkm=hkm, gradient=gradient, hkm_index=hkm_index,
+                 gradient_index=gradient_index)
   
   fn=neg_log_evidence_lambda_pi_shift
-  gr=NULL
-  if(method=="BFGS"|| method=="CG"){
-    gr=neg_log_derive_evidence_lambda_pi_shift
-  }
-  
+  gr=neg_log_derive_evidence_lambda_pi_shift
   
   optim.result <- optim(LambdaK,fn=fn, gr=gr, lambda_iter, params,
                         method=method, control = optim.options, hessian=hessian)
@@ -161,21 +135,9 @@ optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb,
     if(optim.result$convergence == 1){
       warning('!!!!! iteration limit maxit had been reached !!!!!!!\n')
     }
-    if(optim.result$convergence == 10){
-      warning('!!!!! degeneracy of the Nelder–Mead simplex !!!!!!!\n')
-    }
-    if(optim.result$convergence == 51){
-      warning('!!!!! warning from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    if(optim.result$convergence == 52){
-      warning('!!!!! error from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    
     
   }
   
-  
-  #return(optim.result$par)
   return(optim.result)
 }
 
@@ -202,7 +164,7 @@ optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb,
 
 
 
-optimise_lambda_k_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, lambda_iter, eta, nu,
+optimise_lambda_k_flip <- function(LambdaK, data, Z, hkm, gradient, eta, nu,
                                     etah, nuh, method='BFGS',
                                     verbose=FALSE, MAX_GRAD_ITER=1000,
                                     reltol = 1e-12, hessian=FALSE, optim.options=NULL) {
@@ -214,21 +176,15 @@ optimise_lambda_k_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, 
   }
   
   hkm_index <- vector(mode='integer', 1)
-  hkm_lb_index <- vector(mode='integer', 1)
   gradient_index <- vector(mode='integer', 1)
-  lb_index <- vector(mode='integer', 1)
-  lambda_index <- vector(mode='integer', 1)
   
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                 hkm=hkm, hkm_lb=hkm_lb, gradient=gradient, lb=lb,hkm_index=hkm_index,
-                 hkm_lb_index=hkm_lb_index,gradient_index=gradient_index,
-                 lb_index= lb_index, lambda_index=lambda_index)
+                 hkm=hkm,  gradient=gradient, hkm_index=hkm_index,
+                 gradient_index=gradient_index)
   
   fn=neg_log_evidence_lambda_pi_flip
-  gr=NULL
-  if(method=="BFGS"|| method=="CG"){
-    gr=neg_log_derive_evidence_lambda_pi_flip
-  }
+  gr=neg_log_derive_evidence_lambda_pi_flip
+  
   
   optim.result <- optim(LambdaK,fn=fn, gr=gr, lambda_iter, params,
                         method=method, control = optim.options, hessian=hessian)
@@ -239,21 +195,7 @@ optimise_lambda_k_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, 
     if(optim.result$convergence == 1){
       warning('!!!!! iteration limit maxit had been reached !!!!!!!\n')
     }
-    if(optim.result$convergence == 10){
-      warning('!!!!! degeneracy of the Nelder–Mead simplex !!!!!!!\n')
-    }
-    if(optim.result$convergence == 51){
-      warning('!!!!! warning from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    if(optim.result$convergence == 52){
-      warning('!!!!! error from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    
-    
   }
-  
-  
-  #return(optim.result$par)
   return(optim.result)
 }
 
@@ -281,8 +223,7 @@ optimise_lambda_k_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb, 
 #'
 #'
 #'
-optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient, lb,
-                                         lambda_iter, eta, nu,
+optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, gradient, eta, nu,
                               etah, nuh, method='BFGS',
                               verbose=FALSE, MAX_GRAD_ITER=1000,
                               reltol = 1e-12, hessian=FALSE, optim.options=NULL) {
@@ -292,23 +233,15 @@ optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient
   }
 
   hkm_index <- vector(mode='integer', 1)
-  hkm_lb_index <- vector(mode='integer', 1)
   gradient_index <- vector(mode='integer', 1)
-  lb_index <- vector(mode='integer', 1)
-  lambda_index <- vector(mode='integer', 1)
-  
+   
   params <- list(pi = Z, data = data, eta=eta, nu=nu, etah=etah, nuh=nuh,
-                 hkm=hkm, hkm_lb=hkm_lb, gradient=gradient, lb=lb,hkm_index=hkm_index,
-                 hkm_lb_index=hkm_lb_index,gradient_index=gradient_index,
-                 lb_index= lb_index, lambda_index=lambda_index)
+                 hkm=hkm, gradient=gradient, hkm_index=hkm_index,
+                 gradient_index=gradient_index)
   
   fn=neg_log_evidence_lambda_pi_shift_flip
-  gr=NULL
-  if(method=="BFGS"|| method=="CG"){
-    gr=neg_log_derive_evidence_lambda_pi_shift_flip
-  }
+  gr=neg_log_derive_evidence_lambda_pi_shift_flip
   
-
   optim.result <- optim(LambdaK, fn=fn,
                         gr=gr, lambda_iter, params,
                         method=method,  control = optim.options, hessian=hessian)
@@ -317,20 +250,8 @@ optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, hkm_lb, gradient
     if(optim.result$convergence == 1){
       warning('!!!!! iteration limit maxit had been reached !!!!!!!\n')
     }
-    if(optim.result$convergence == 10){
-      warning('!!!!! degeneracy of the Nelder–Mead simplex !!!!!!!\n')
-    }
-    if(optim.result$convergence == 51){
-      warning('!!!!! warning from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    if(optim.result$convergence == 52){
-      warning('!!!!! error from the "L-BFGS-B" method !!!!!!!\n')
-    }
-    
-    
   }
   
-  #return(optim.result$par)
   return(optim.result)
 }
 

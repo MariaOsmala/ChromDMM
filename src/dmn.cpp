@@ -15,30 +15,12 @@
 // [[Rcpp::depends(RcppGSL)]]
 
 
-// double REG_H_LAMBDA(NumericVector lambda) {
-//   int i;
-//   double hk = 0.0;
-// 
-//   //from second element to the last
-//   for (i = 1; i < lambda.length(); i++) {
-//     double diff = exp(lambda[i]) - exp(lambda[i-1]);
-//     hk += diff * diff;
-//   }
-//   return hk;
-// }
-
 // [[Rcpp::export]]
 void disable_gsl_error_handler() {
  gsl_set_error_handler_off();
 }
 
-//computes the value of function g for j=index, input lambda values
-// double REG_DERIV_LAMBDA_G(NumericVector lambda, int index) {
-//   int prev = index - 1, next = index + 1;
-//   if (index == 0) prev = 0;
-//   if (index == lambda.length()-1) next = index;
-//   return 2*(2*exp(lambda[index]) - exp(lambda[prev]) - exp(lambda[next]));
-// }
+
 
 /*Soft K-means clustering treats the cluster assignments as probability distributions
 over the clusters. There is a connection between Euclidean distance and multivariate normal
@@ -216,7 +198,7 @@ Rcpp::List soft_kmeans(Rcpp::NumericMatrix data,
  */
 
 // [[Rcpp::export]]
-double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda_iter, Rcpp::List lparams)
+double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda,  Rcpp::List lparams)
 {
     int i, j;
 
@@ -227,24 +209,6 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
     double GAMMA_ITA_H = as<double>(lparams["etah"]);
     double GAMMA_NU_H = as<double>(lparams["nuh"]);
     
-    Rcpp::List lb = as<Rcpp::List>(lparams["lb"]);
-    Rcpp::IntegerVector lb_index = as<Rcpp::IntegerVector>(lparams["lb_index"]);
-    Rcpp::List hkm_lb = as<Rcpp::List>(lparams["hkm_lb"]);
-    Rcpp::IntegerVector hkm_lb_index = as<Rcpp::IntegerVector>(lparams["hkm_lb_index"]);
-    Rcpp::IntegerVector lambda_index = as<Rcpp::IntegerVector>(lparams["lambda_index"]);
-    
-    
-    // Rprintf( "lambda_index: %i, lambda_iter.length: %i\n",
-    //         lambda_index[0], lambda_iter.size());
-    
-    if (lambda_index[0] < lambda_iter.size()) {
-      lambda_iter[lambda_index[0]]=clone(lambda);
-    }
-    else{
-      Rprintf("lambda_index exceeds lambda_iter vector length!!! lambda_index: %i, lambda_iter.length: %i\n",
-              lambda_index[0], lambda_iter.size());
-    }
-    lambda_index[0] += 1;
 
     const int L = aanX.ncol(); // L_x
     const int N = aanX.nrow();
@@ -296,21 +260,11 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
       reg_term = 0.0;
     } else {
       double hk = REG_H_LAMBDA(lambda); // computes the value of the regularization term
-      
-     
-
-      
       reg_term = GAMMA_NU_H*hk - (GAMMA_ITA_H-1)*log(hk); //This was nuh *hg-etah*log (hk), it is now corrected to (GAMMA_ITA_H-1)!!!
     }
 
     return dLogE + dWeight*dLogEAlpha + // complete data likelihood term
       GAMMA_NU*dSumAlpha - (GAMMA_ITA - 1) * dSumLambda + reg_term;//prior term, ITA corrected to ITA-1 !!!
-
-    //should it be (GAMMA_ITA-1)*dSumLambda???
-    // Rprintf("LB value: %f\n", retVal);
-    
-    
-  
 
 }
 
@@ -323,7 +277,6 @@ double neg_log_evidence_lambda_pi(Rcpp::NumericVector lambda, Rcpp::List& lambda
 
 // [[Rcpp::export]]
 Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLambda,
-                                                      Rcpp::List& lambda_iter,
                                                       Rcpp::List lparams)
 {
     Rcpp::IntegerMatrix aanX = as<Rcpp::IntegerMatrix>(lparams["data"]); // N x L
@@ -362,10 +315,8 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
         for (i = 0; i < N; i++) {
             int dN = aanX(i, j);
             double dAlphaN = adAlpha[j] + dN;
-
             double psiAlphaN = dN ? gsl_sf_psi(dAlphaN) : alphaS0;
             adDeriv[j] -= adPi[i]*psiAlphaN; //adDeriv_2[j]
-            //            adDeriv[j] -= adPi[i]*gsl_sf_psi (dAlphaN);
             adStore[i] += dAlphaN; //  \sum_j^L x_ij + \sum_j^L \alpha_j
         }
     }
@@ -410,7 +361,6 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi(Rcpp::NumericVector ptLamb
     }
     gnorm=sqrt(gnorm);
     
-    //Rprintf("Gradient norm: %f\n", gnorm);
     
     if (gradient_index[0] < gradient.size()) {
       gradient[gradient_index[0]] = gnorm;
@@ -452,23 +402,18 @@ double neg_log_evidence_i(Rcpp::IntegerVector dataRow, Rcpp::NumericVector Lambd
     double dSumAlphaN = 0.0; // \sum_j^L (x_{ij} + \alpha_{j})
 
     for (j = 0; j < L; j++) {
-        // Rcpp::Rcout << "j: "<<j << "\n";
         const double n = dataRow[j]; // x_{ij}
         const double dAlpha = exp(Lambda[j]); //alpha_j
         const double dAlphaN = n + dAlpha; // x_{ij} + alpha_j
         // dLogEAlpha_1
         dLogEAlpha += LnGammaLambda0[j]; // \sum_j^L lngamma ( \alpha_{jk}^{(m)}  )
-        // Rcpp::Rcout << "dLogEAlpha: "<<dLogEAlpha << "\n";
         dSumAlpha += dAlpha; // \sum_j^L \alpha_{j}
         dSumAlphaN += dAlphaN; // \sum_j^L (x_{ij} + \alpha_{j})
         dLogE -= n ? gsl_sf_lngamma(dAlphaN) : LnGammaLambda0[j] ;
-        // Rcpp::Rcout << "dLogE: "<<dLogE << "\n";
     }
     // dLogEAlpha_2 
     dLogEAlpha -= gsl_sf_lngamma(dSumAlpha); // \sum_j^L lngamma ( \alpha_{jk}^{(m)}  ) - lngamma(  \sum_j^L (x_{ij} + \alpha_{j}) )
     dLogE += gsl_sf_lngamma(dSumAlphaN); // \sum_j^L (x_{ij} + \alpha_{j})
-    // Rcpp::Rcout << "dLogEAlpha: "<<dLogEAlpha << "\n";
-    // Rcpp::Rcout << "dLogE: "<<dLogE << "\n";
     return dLogE + dLogEAlpha;
 }
 
@@ -512,7 +457,7 @@ Rcpp::NumericMatrix calc_z(Rcpp::NumericMatrix Z, Rcpp::List data,
               LngammaLambda0_matrix(k, j) = gsl_sf_lngamma(dAlpha);
           } //j
       } //k
-      LngammaLambda0[m] = Rcpp::clone(LngammaLambda0_matrix);
+      LngammaLambda0[m] = LngammaLambda0_matrix;
     } //m
 
     for (i = 0; i < N; i ++) {
@@ -618,7 +563,7 @@ double neg_log_likelihood(Rcpp::NumericVector W, Rcpp::List Lambda,
           } //over j
           LogBAlpha(m, k) -= gsl_sf_lngamma(dSumAlphaK); // \sum_j^L lng (alpha_jk) -lngamma( \sum_j^L \alpha_jk)
       } // over k
-      LngammaLambda0[m] = Rcpp::clone(LngammaLambda0_matrix); // list of length M
+      LngammaLambda0[m] = LngammaLambda0_matrix; // list of length M
     } // over m
     for (i = 0; i < N; i++) {
         double dProb = 0.0;
@@ -702,207 +647,7 @@ double neg_log_likelihood(Rcpp::NumericVector W, Rcpp::List Lambda,
 
 }
 
-/* DONE Function whose convergence is checked in each EM iteration
- * Computes the negative lower bounds, terms only depending on theta and cluster assignment
- * W weights 1xK, these are \pi_k values
- * lambda list of length M, these are K x L matrices
- * binned.data list of length M, NxL matrices
- * Z=Ez K x N matrix 
- */
 
-// [[Rcpp::export]]
-double neg_lower_bound(Rcpp::NumericMatrix Z, Rcpp::NumericVector W,
-                             Rcpp::List Lambda,Rcpp::List data, double eta, double nu,
-                             double etah, double nuh)
-{
-  
-  Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x L
-  const int N = temp.nrow();
-  //Rprintf("N: %i \n", N);
-  // Rcpp::Rcout << "N: "<<N << "\n";
-  const int K = W.length();
-  // Rcpp::Rcout << "K: "<<K << "\n";
-  const int M = data.size();
-  // Rcpp::Rcout << "M: "<<M << "\n";
-  int i, j, k, m;
-  
-  Rcpp::NumericMatrix evidence_matrix(M, K); // will contain the log p(\mathbf{x}_{i}^m| \theta) for sample i
-  
-  Rcpp::NumericVector L(M);
-  
-  for (m=0; m<M; m++) {
-    temp = as<Rcpp::IntegerMatrix>(data[m]); //N x L matrix
-    L[m] = temp.ncol(); //L
-  }
-  
-  
-    double dL7 = 0.0; //-nu* \sum_j^L \alpha_kj^m from prior
-  double dL8 = 0.0; // eta * \sum_j^L \lambda_kj^m from prior
-  double regterm2 = 0.0; // \sum_k^K ((etah - 1) * log(hkm) - nuh*hkm);  form prior
-  
-
-  
-  Rcpp::List LngammaLambda0(M); // lngamma ( \alpha_{jk}^{(m)}  )
-  
-  // Compute lngammaalpha_jkms
-  for (m = 0; m < M; m++) {
-    // Rcpp::Rcout << "m: "<<m << "\n";
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    Rcpp::NumericMatrix LngammaLambda0_matrix(K, L[m]); // lngamma ( \alpha_{jk}  )
-    for(k = 0; k < K; k++){
-      // Rcpp::Rcout << "k: "<<k << "\n";
-      for(j = 0; j < L[m]; j++){
-          const double dAlpha = exp(Lambda_matrix(k, j));
-          LngammaLambda0_matrix(k, j) = gsl_sf_lngamma(dAlpha);
-        } //j
-    } //k
-    LngammaLambda0(m) = Rcpp::clone(LngammaLambda0_matrix);
-  } //m
-  
-  double dSum = 0.0;
-  for (m = 0; m < M; m++) {
-    
-    // offset[m] = BIG_DBL; //1.0e9
-    
-    Rcpp::IntegerMatrix data_matrix = as<Rcpp::IntegerMatrix>(data[m]); // N x L matrix
-    Rcpp::NumericMatrix lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x L matrix
-    // Rcpp::NumericMatrix Ln = as<Rcpp::NumericMatrix>(LngammaLambda0[m]); // K x L lngamma ( \alpha_{jk}^{(m)}  )
-    Rcpp::NumericMatrix LngammaLambda0_matrix = LngammaLambda0(m); //K x L
-    for (k = 0; k < K; k++) {
-        for (i = 0; i < N; i++) {
-        // Rcpp::NumericVector offset(M); //save the smallest negLogEvidence for each cluster(largest absolute value)
-        // Compute the evidence matrix, the DirichletMultinomial pdf for given i, m and k
-        Rcpp::IntegerVector data_row = data_matrix(i, _); // one row of X of length Lx
-    
-        
-        //Computes the logarithm of -p(\mathbf{x}_i|z_{ik}=1,\bm{\theta}) but of only those
-        // terms that depend on \alpha
-        // I.e. computes the negative logarithm of the unnormalized DirichletMultinomial pdf value
-        //logarithm due to numerical purposes
-        // computes the - log DirMulti(x_i^m | alpha_k^m), terms not depending on alpha excluded
-     
-        double dNegLogEviI =neg_log_evidence_i(data_row, lambda_matrix(k, _), //dNegLogEviI[k,s] is negative ->  +=
-                                            LngammaLambda0_matrix(k, _));
-        dSum += Z(k,i)*dNegLogEviI;
-        
-      } //over N
-      
-    } //over K
-  } //over M
-  
-
-  for(k = 0; k < K; k++){
-    double piK = W[k]/Rcpp::sum(W);
-    for(i = 0; i < N; i++){
-        dSum -= Z(k,i)*log(piK); // dNegLogEviI[k,s] is negative ->  +=
-    }
-  }
-  
-  for (m = 0; m < M; m++) {
-    Rcpp::NumericMatrix Lambda_matrix = as<Rcpp::NumericMatrix>(Lambda[m]); //K x La matrix
-    
-    for (k = 0; k < K; k++) {
-      
-      if ((etah!=0) || (nuh!=0)) {
-        // exp(Lambda_matrix(i, _) are alpha_k, all L elements
-        // diff function in c++ computes the difference of elements of a vector
-        double hkm = sum( diff( exp(Lambda_matrix(k, _)) ) * diff(exp(Lambda_matrix(k, _))));
-        regterm2 += (etah - 1) * log(hkm) - nuh*hkm; // \sum_k^K (etah - 1) * log(hkm) - nuh*hkm;
-      }
-      
-      dL7 += sum(exp(Lambda_matrix(k, _))); // \sum_j^L \alpha_kj^m
-      dL8 += sum(Lambda_matrix(k, _));  //  \sum_j^L \lambda_kj^m
-    } // over K
-  }  // over M
-  dL7 *= -nu; //-nu* \sum_j^L \alpha_kj^m
-  dL8 *= (eta-1); // eta * \sum_j^L \lambda_kj^m SHOULD BE (eta-1)
-  return dSum - dL7 - dL8 - regterm2;
-  //
-  
-}
-
-
-
-
-/* Used when optimizing the shift and flip. What does this try to optimize???
- * shift_dist: the amount of shift (-120) dist.candidates(1)
- * index of the sample
- * do we flip (F)
- * data =binned.data,
- * alpha=lapply(lambda, exp),
- * Z=Ez
- */
-
-// [[Rcpp::export]]
-double optimization_func(Rcpp::IntegerVector shift_dist,
-                         Rcpp::IntegerVector index,
-                         Rcpp::LogicalVector flip,
-                         Rcpp::List data,
-                         Rcpp::List alpha,
-                         Rcpp::NumericMatrix Z) {
-
-  double res = 0;
-  int K = Z.nrow(); //cluster number
-  Rcpp::Function shift_and_flip_signal("shift.and.flip.signal"); //this function is in util.R
-
-  if (shift_dist.length() != index.length()) {
-    throw std::length_error("Shift distance vector and index length do not match.");
-  }
-
-  if (flip.length() != index.length()) {
-    throw std::length_error("Flip vector and index length not match.");
-  }
-
-//  Rprintf("shift_optimization: shift_dist:%d\n", shift_dist);
-
-  //shift.and.flip.signal <- function(data=binned.data, indices=wrap(index), dist, flip)
-  //shifts and flips the samples of index index by shift_dist, can be also used to flip the
-  // samples, the shifted and flipped samples should be the same
-  // This function is in util.R
-  Rcpp::List shifteddata = shift_and_flip_signal(data,
-                                           wrap(index), //onverting from C++ to R using Rcpp::wrap(obj)
-                                           wrap(shift_dist),
-                                           wrap(flip));
-
-  //iterate over data types
-  for (int m = 0; m < shifteddata.length(); m++) {
-    Rcpp::NumericMatrix datamatrix = as<Rcpp::NumericMatrix>(shifteddata[m]);
-    Rcpp::NumericMatrix alphamatrix = as<Rcpp::NumericMatrix>(alpha[m]);
-
-    // iterate over rows/samples
-    for (int i = 0; i < index.length(); i++) {
-      int index_zerob = index[i] - 1;
-      Rcpp::NumericVector Xi = datamatrix.row(index_zerob);
-
-      // iterate over clusters
-      for (int k = 0; k < K; k++) {
-        Rcpp::NumericVector alphak = alphamatrix(k, _);
-
-        double sumlgammaXialpha = 0.0; // \sum_j^S lng (x_ij + alpha_kj)
-        double sumXialpha = 0.0;  // \sum_j^S (x_ij+\alpha_kj)
-        double Xisum = 0.0; // \sum_j^S x_ij
-        double sumlfactXi = 0.0; // \sum_j lngamma( x_ij +1 )
-
-        // iterate over columns
-        for(int s = 0; s < datamatrix.ncol(); s++) {
-          double tmpsum = Xi[s] + alphak[s];
-          sumlgammaXialpha += gsl_sf_lngamma(tmpsum); // \sum_j^S lng (x_ij + alpha_kj)
-          sumXialpha += tmpsum; // \sum_j^S (x_ij+\alpha_kj)
-          Xisum += Xi[s]; // \sum_j^S x_ij
-          sumlfactXi += gsl_sf_lnfact(Xi[s]); // \sum_j lngamma( x_ij +1 )
-        }
-
-        double tmp = sumlgammaXialpha - // \sum_j^S lng (x_ij + alpha_kj)
-                     gsl_sf_lngamma(sumXialpha) + // lngamma ( \sum_j^S (x_ij+\alpha_kj) )
-                     gsl_sf_lnfact(Xisum) -      //lngamma ( \sum_j^S x_ij +1)
-                     sumlfactXi;                 // \sum_j lngamma( x_ij +1 )
-        res += Z(k, index_zerob)*tmp;
-      }
-    }
-  }
-//  Rprintf("shift_optimization: Result: %f\n", -res);
-  return -res;
-}
 
 
 
@@ -981,187 +726,5 @@ NumericMatrix hessian(Rcpp::NumericVector Lambda, Rcpp::NumericVector Pi,
     }
     return Hessian;
 }
-/*
-static void group_output(struct data_t *data, double** aadZ)
-{
-    const int N = data->N, K = data->K;
-    int i, k;
-    for(k = 0; k < K; k++)
-        for (i = 0; i < N; i++)
-            data->group[k * N + i] = aadZ[k][i];
-}
-*/
 
-// [[Rcpp::export]]
-List mixture_output(Rcpp::IntegerMatrix data, Rcpp::NumericVector W,
-                    Rcpp::NumericMatrix Lambda, Rcpp::NumericMatrix Err)
-{
-    const int N = data.nrow(), S = data.ncol(), K = W.length();
-    int i, k;
 
-    Rcpp::NumericVector mixture_wt(K);
-    Rcpp::NumericMatrix fit_lower(K, S), fit_upper(K, S), fit_mpe(K, S);
-
-    fit_lower.attr("dimnames") = Lambda.attr("dimnames");
-    fit_upper.attr("dimnames") = Lambda.attr("dimnames");
-    fit_mpe.attr("dimnames") = Lambda.attr("dimnames");
-
-    for (k = 0; k < K; k++)
-        mixture_wt[k] = W[k] / N;
-
-    for (i = 0; i < S; i++) {
-        for (k = 0; k < K; k++) {
-            double dErr = Err(k, i), dL = 0.0, dU = 0.0;
-            int bIll = FALSE;
-            if (dErr >= 0.0) {
-                dErr = sqrt(dErr);
-                if (dErr < 100.0) {
-                    dL =  exp(Lambda(k, i) - 2.0*dErr);
-                    dU =  exp(Lambda(k, i) + 2.0*dErr);
-                } else bIll = TRUE;
-            } else bIll = TRUE;
-
-            if (bIll)
-                dL = dU = R_NaN;
-            fit_lower(k, i) = dL;
-            fit_mpe(k, i) = exp(Lambda(k, i));
-            fit_upper(k, i) = dU;
-        }
-    }
-    return Rcpp::List::create(_["Lower"]=fit_lower,
-                        _["Upper"]=fit_upper,
-                        _["Estimate"]=fit_mpe,
-                        _["Mixture"]=mixture_wt);
-}
-
-/*
-// [[Rcpp::export]]
-List dirichlet_fit(IntegerMatrix data, int K, int seed = -1,
-                        int maxIt=250, bool verbose=true,
-                        double eta=0.1, double nu=0.1, double stiffness=50.0,
-                        bool randomInit=true)
-{
-    const int N = data.nrow(), S = data.ncol();
-    int i, j, k;
-    RNGScope rng; //initialize RNG
-
-    if(seed != -1) {
-        Function setseed("set.seed");
-        setseed(seed);
-    }
-
-    NumericMatrix Z(K, N), Lambda(K, S), Err(K, S);
-    NumericVector W(K);
-
-    // soft k means initialiser
-    List kmeans_result = soft_kmeans(data, K, verbose,
-                                     randomInit, stiffness);
-    Lambda = as<NumericMatrix>(kmeans_result["centers"]);
-    //W = kmeans_result["weights"];
-    Z = as<NumericMatrix>(kmeans_result["labels"]);
-
-    for (k = 0; k < K; k++) {
-        for (i = 0; i < N; i++)
-            W[k] += Z(k, i);
-    }
-
-    if (verbose)
-        Rprintf("  Expectation Maximization setup\n");
-
-    for (k = 0; k < K; k++) {
-        for (j = 0; j < S; j++) {
-            const double x = Lambda(k, j);
-            Lambda(k, j) = (x > 0.0) ? log(x) : -10;
-        }
-        Lambda(k, _) = optimise_lambda_k(Lambda(k, _), data, Z(k, _), eta, nu);
-    }
-
-    // simple EM algorithm
-    int iter = 0;
-    double dNLL = 0.0, dNew = 0.0, dChange = BIG_DBL;
-
-    if (verbose)
-        Rprintf("  Expectation Maximization\n");
-
-    while (dChange > 1.0e-6 && iter < maxIt) {
-        if (verbose)
-            Rprintf("  Calculating Ez...\n");
-
-        Z = calc_z(Z, data, W, Lambda); // latent var expectation
-
-        if (verbose)
-            Rprintf("  Optimizing wrt Lambda values...\n");
-
-        for (k = 0; k < K; k++) // mixture components, given pi
-            Lambda(k, _) = optimise_lambda_k(Lambda(k, _), data, Z(k, _), eta, nu);
-
-        for (k = 0; k < K; k++) { // current likelihood & weights
-            W[k] = 0.0;
-            for(i = 0; i < N; i++)
-                W[k] += Z(k, i);
-        }
-
-        if (verbose)
-            Rprintf("  Calculate negative loglikelihood...\n");
-
-        dNew = neg_log_likelihood(W, Lambda, data, eta, nu);
-        dChange = fabs(dNLL - dNew);
-        dNLL = dNew;
-        iter++;
-        checkUserInterrupt();
-        if (verbose && (iter % 1) == 0)
-            Rprintf("    iteration %d change %.6f\n", iter, dChange);
-    }
-
-    // hessian
-    if (verbose)
-        Rprintf("  Hessian\n");
-
-    gsl_permutation *p = gsl_permutation_alloc(S);
-    double dLogDet = 0.0, dTemp;
-    int signum, status;
-
-    for (k = 0; k < K; k++) {
-        if (k > 0)
-            dLogDet += 2.0 * log(N) - log(W[k]);
-
-        RcppGSL::matrix<double> Hessian(hessian(Lambda(k, _), Z(k, _), data, nu));
-        RcppGSL::matrix<double> InverseHessian(S, S);
-
-        status = gsl_linalg_LU_decomp(Hessian, p, &signum);
-        gsl_linalg_LU_invert(Hessian, p, InverseHessian);
-        for (j = 0; j < S; j++) {
-            Err(k, j) = InverseHessian(j, j);
-            dTemp = Hessian(j, j);
-            dLogDet += log(fabs(dTemp));
-        }
-        Hessian.free();
-        InverseHessian.free();
-    }
-    gsl_permutation_free(p);
-
-    // results
-    List result;
-    double dP = K * S + K - 1;
-    double laplace = dNLL + 0.5 * dLogDet - 0.5 * dP * log(2. * M_PI);
-    double bic = dNLL + 0.5 * log(N) * dP;
-    double aic = dNLL + dP;
-
-    result["GoodnessOfFit"] = NumericVector::create(_["NLE"]=dNLL,
-                                                    _["LogDet"]=dLogDet,
-                                                    _["Laplace"]=laplace,
-                                                    _["BIC"]=bic,
-                                                    _["AIC"]=aic);
-    //group and fit results must be transposed
-    result["Group"] = Z;
-
-    List mix_list = mixture_output(data, W, Lambda, Err);
-    result["Mixture"] = List::create(_["Weight"] = mix_list["Mixture"]);
-
-    result["Fit"] = List::create(_["Estimate"]=mix_list["Estimate"],
-                                 _["Upper"]=mix_list["Upper"],
-                                 _["Lower"]=mix_list["Lower"]);
-
-    return result;
-}
-*/

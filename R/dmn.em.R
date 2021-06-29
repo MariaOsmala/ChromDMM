@@ -1,11 +1,9 @@
-dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose, 
+dmn.em <- function(kmeans.res, Wx, bin.width, alpha, M, K, Lx,  N, verbose, 
                    maxNumOptIter, binned.data, eta, nu, etah, nuh, numOptRelTol, 
-                   EM.maxit, EM.threshold, method="BFGS", optim.options=NULL, hessian=FALSE) {
+                   EM.maxit, EM.threshold, optim.options=NULL, hessian=FALSE) {
   
   
   Ez <- kmeans.res$labels #K x N initial values of the posterior probabilities of cluster assignments
-  Ez_list=list()
-  Ez_list[[1]]=data.table::copy(Ez)
   
   #lambda is log(alpha)
   alpha <- lapply(alpha, function(a){a[a <= 0] <- 1e-6;a})
@@ -25,71 +23,52 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                          width=40,
                          style=3)
   }
-  lambda_optim_message<-vector(mode = 'list', M)
-  alpha_list<-vector(mode = 'list', M)
-  
+    
   #Initialize the lambda values by optimizing Q wrt the lambda values
   for (m in 1:M) { #over data types
-    lambda_optim_message[[m]]<-list()
-    alpha_list[[m]]<-list()
+  
     for (k in 1:K) { #over clusters
       if (verbose)
         setTxtProgressBar(pb, (m-1)*K+k)
       hkm <- vector(mode = 'list', maxNumOptIter+1) #comes from gradient computation
-      hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
       gradient<- vector(mode = 'list', maxNumOptIter+1)
-      lb <- vector(mode = 'list', maxNumOptIter+1)
-      lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
+
       #the lambda_{kj}^{(m)} can be optimized for each k and m separately
       
      optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
-                                          hkm_lb=hkm_lb,
                                           gradient=gradient,
-                                          lb=lb,
-                                          lambda_iter=lambda_iter,
                                           eta=eta,
                                           nu=nu,
                                           etah=etah,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian,method=method, optim.options=optim.options)
+                                          reltol=numOptRelTol, 
+                                          hessian=hessian, 
+                                          optim.options=optim.options)
       
-     alpha_list[[m]][[k]] =exp( do.call(rbind,lambda_iter))
+     
      hkm <- unlist(hkm)
-     hkm_lb <- unlist(hkm_lb)
      gradient <- unlist(gradient)
      
-     
-     if(length(gradient)==0){
-       hkm <- data.frame(Datatype=names(binned.data)[m],
-                         Component=k,
-                         EM.iter=0,
-                         hkm=hkm_lb,
-                         lb=unlist(lb),
-                         nll=optim.result$value)
-     }else{
-       hkm <- data.frame(Datatype=names(binned.data)[m],
+    hkm <- data.frame(Datatype=names(binned.data)[m],
                          Component=k,
                          EM.iter=0,
                          hkm=hkm,
                          nll=optim.result$value,
                          gradient=gradient)
-     }
-     
+    
      if(hessian==TRUE){
        hkm$detH=det(optim.result$hessian)
      }
      
-     
      EM.diagnostics <- rbind(EM.diagnostics, hkm)
    
-      lambda[[m]][k,] <-optim.result$par
-      lambda_optim_message[[m]][[k]]<-optim.result
-      
+    lambda[[m]][k,] <-optim.result$par
+          
     }
   } #initialization ends
   
@@ -101,24 +80,11 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   #EM loop
   iter <- 0
   last.nll <- .Machine$double.xmax
-  last.nLB <- .Machine$double.xmax
-  
-  nll.change <- .Machine$double.xmax #1.797693e+308
-  nLB.change <- .Machine$double.xmax #1.797693e+308
+ 
   
   real.change<- .Machine$double.xmax #1.797693e+308
-  nLB.real.change <- .Machine$double.xmax #1.797693e+308 
-  
-  
-  EM_lambda_optim_message <- vector(mode = 'list', EM.maxit+1)
-  EM_lambda_optim_message[[1]]<- lambda_optim_message
-
-  EM_alpha_list <- vector(mode = 'list', EM.maxit+1)
-  EM_alpha_list[[1]] <- alpha_list
-  
-  
-  #use negative lower bound to check the convergence
-  nLB_list<- vector(mode = 'list', EM.maxit+1)
+    
+  #use negative LL/unnormalized posterior to check the convergence
   nll_list<- vector(mode = 'list', EM.maxit+1)
   #function neg_log_likelihood is used to check the convergence
   nll_iter=1
@@ -126,33 +92,20 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   last.nll <- nll_list[[nll_iter]]
   nll_iter=nll_iter+1
   
-  nLB_iter=1
-  nLB_list[[nLB_iter]] <- neg_lower_bound(Ez, weights, lambda, binned.data, eta, nu, etah, nuh)
-  last.nLB <- nLB_list[[nLB_iter]]
-  nLB_iter=nLB_iter+1
   
-  nll.change_list<- vector(mode = 'list', EM.maxit+1)
-  nLB.change_list<- vector(mode = 'list', EM.maxit+1)
-  
+    
   #E-step
   #M-step
-  #shifting and flipping, one needs to write separate EM-loops for (shift=false, flip=false), 
-  #(shift=true, flip=false), (shift=false, flip=true), (shift=true, flip=true)
-  #4 different em-functions
+  
   #while (iter < EM.maxit ) {
-  while ((iter < EM.maxit) && (nLB.real.change > EM.threshold) && (real.change > EM.threshold)) {
-    print(iter)
-  #while ((iter < EM.maxit) && (nll.change > EM.threshold)) {
-  #  print(iter)
+  while ((iter < EM.maxit) && (real.change > EM.threshold)) {
     if (verbose)
       cat('Calculating Ez values...\n')
     
     #Computes the E-step, the posterior probabilities of the cluster labels
     #The old Ez values not really used
     # returns K x N matrix Z
-    #why offset subtracted?
     Ez <- calc_z(Ez, binned.data, weights, lambda)
-    Ez_list[[iter+2]]=data.table::copy(Ez)
     stopifnot(!is.na(Ez), !is.infinite(Ez))
     
     #Computes M-step, same for lambda as the EM initialization
@@ -166,62 +119,42 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
                            width=40,
                            style=3)
     }
-    lambda_optim_message<-vector(mode = 'list', M)
-    alpha_list<-vector(mode = 'list', M)
+    
     for (m in seq_len(M)) {
-      #print(m)
-      lambda_optim_message[[m]]<-list()
-      alpha_list[[m]]<-list()
-      for (k in seq_len(K)) {
-        #print(k)
-        if (verbose)
+       for (k in seq_len(K)) {
+         if (verbose)
           setTxtProgressBar(pb, (m-1)*K+k)
         
         hkm <- vector(mode = 'list', maxNumOptIter+1) #comes from gradient computation
-        hkm_lb <- vector(mode = 'list', maxNumOptIter+1) #comes from function computation
         gradient <- vector(mode = 'list', maxNumOptIter+1)
-        lb <- vector(mode = 'list', maxNumOptIter+1)
-        lambda_iter <- vector(mode = 'list', maxNumOptIter+1)
         optim.result <- optimise_lambda_k(LambdaK=lambda[[m]][k,],
                                           data=binned.data[[m]],
                                           Z=Ez[k,],
                                           hkm=hkm,
-                                          hkm_lb=hkm_lb,
                                           gradient=gradient,
-                                          lb=lb,lambda_iter=lambda_iter,
                                           eta=eta,
                                           nu=nu,
                                           etah=etah,
                                           nuh=nuh,
                                           verbose=verbose,
                                           MAX_GRAD_ITER=maxNumOptIter,
-                                          reltol=numOptRelTol, hessian=hessian, method=method, optim.options=optim.options)
+                                          reltol=numOptRelTol, 
+                                          hessian=hessian, 
+                                          optim.options=optim.options)
         
-        alpha_list[[m]][[k]]=exp( do.call(rbind,lambda_iter))
+        
         lambda[[m]][k,] <-optim.result$par
-        lambda_optim_message[[m]][[k]]<-optim.result
-        
-        
-        
         hkm <- unlist(hkm)
-        hkm_lb <- unlist(hkm_lb)
         gradient <- unlist(gradient)
        
-        if(length(gradient)==0){
-          hkm <- data.frame(Datatype=names(binned.data)[m],
-                            Component=k,
-                            EM.iter=iter+1,
-                            hkm=hkm_lb,
-                            lb=unlist(lb),
-                            nll=optim.result$value)
-        }else{
-          hkm <- data.frame(Datatype=names(binned.data)[m],
+    
+        hkm <- data.frame(Datatype=names(binned.data)[m],
                             Component=k,
                             EM.iter=iter+1,
                             hkm=hkm,
                             nll=optim.result$value,
                             gradient=gradient)
-        }
+        
         
         
         if(hessian==TRUE){
@@ -231,43 +164,10 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
         EM.diagnostics <- rbind(EM.diagnostics, hkm)
       }
     }
-    #save.image("/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/DMM-private-master-devel-works/shif.flip.debugging.RData")
-    EM_lambda_optim_message[[iter+2]]<- lambda_optim_message
-    EM_alpha_list[[iter+2]] <- alpha_list
     
-
     stopifnot(!is.na(unlist(lambda)), !is.infinite(unlist(lambda)))
     
-    # if ((shift.ratio > 0 &&shift) || flip){
-    #   if (verbose)
-    #     cat('\nOptimizing shift/flip parameters...\n')
-    #   #this is in util.R
-    #   #optimization_func is in dmn.cpp, what does it try to optimize?
-    #   #returns $shift (length N vector)
-    #   #returns $flip (length N locigal)
-    #   best.shift.and.flip.params <- brute.force.integer.minimizer(fn=optimization_func,
-    #                                                  limits=attr(binned.data, 'shift.limits'),
-    #                                                  step=bin.width,
-    #                                                  parallel.shift=parallel.shift,
-    #                                                  verbose=verbose,
-    #                                                 shift=shift.reads,
-    #                                                  flip=flip,
-    #                                                  data=binned.data,
-    #                                                  alpha=lapply(lambda, exp),
-    #                                                  Z=Ez)
-    #   if (verbose) {
-    #     cat('\nRead shifting frequencies: \n')
-    #     print(table(best.shift.and.flip.params$shift))
-    # 
-    #     cat('\nRead flip parameters: \n')
-    #     print(table(best.shift.and.flip.params$flip))
-    # 
-    #   }
-    #   binned.data <- shift.and.flip.signal(binned.data, seq_len(N),
-    #                                        best.shift.and.flip.params$shift,
-    #                                        best.shift.and.flip.params$flip)
-    # } #end of shifting and flipping
-    
+        
     weights <- rowSums(Ez) # \pi_k values Ez is K x N matrix, are these normalized? Should this be rowMeans?
     
     if (verbose)
@@ -282,55 +182,29 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     nll_list[[nll_iter]]=nll
     nll_iter=nll_iter+1
   
-    nLB <- neg_lower_bound(Ez, weights, lambda,
-                                 binned.data, eta, nu,
-                                 etah, nuh)
-    print(nLB)
-    #stopifnot(!is.na(nLB), !is.infinite(nLB))
-    nLB_list[[nLB_iter]]=nLB
-    nLB_iter=nLB_iter+1
-    
     real.change=last.nll-nll
-    nLB.real.change=last.nLB-nLB
     
     if(real.change< -numOptRelTol){
       print("Warning: Neg.LL does not decrease!!!")
     }
     
-    if(nLB.real.change < -numOptRelTol){
-      print("Warning: Neg.LB does not decrease!!!")
-    }
-    
-    nll.change <- abs(real.change)
-    nLB.change <- abs(nLB.real.change)
-    
-    nll.change_list[[iter+1]]<-nll.change
-    nLB.change_list[[iter+1]]<-nLB.change
-    
     last.nll <- nll
-    last.nLB <- nLB
-    
     iter <- iter+1
     
-    if (verbose)
-      print(paste('--> EM Iteration:', iter, 'Neg.LL change (absolute):', round(nll.change, -log10(numOptRelTol)) ))
-    print(paste('--> EM Iteration:', iter, 'Neg.LL change (real):', round(real.change, -log10(numOptRelTol)) ))
-    print(paste('--> EM Iteration:', iter, 'Neg.LB change (absolute):', round(nLB.change, -log10(numOptRelTol)) ))
-    print(paste('--> EM Iteration:', iter, 'Neg.LB change (real):', round(nLB.real.change, -log10(numOptRelTol)) ))
-    print(paste0("Neg.LL ",round(nll,-log(numOptRelTol)) ))
-    print(paste0("Neg.LL ",round(last.nLB, -log(numOptRelTol)) ))
-    
+    if (verbose){
+      print(paste('--> EM Iteration:', iter, 'Neg.LL change (real):', round(real.change, -log10(numOptRelTol)) ))
+      print(paste0("Neg.LL ",round(nll,-log10(numOptRelTol)) ))
+    }
     
   } #EM loop ends
-  print("EM finished")
+  
   
   # Model selection
   # hessian
   if (verbose)
     cat("  Hessian\n")
   nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
-  nLB.data<-data.frame(iter=which(sapply(nLB_list, length)!=0), nLB=unlist(nLB_list[which(sapply(nLB_list, length)!=0)]))
-
+  
   #   err <- matrix(0, K, S)
   logDet <- 0
   
@@ -372,14 +246,8 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
   
   result$GoodnessOfFit <- gof
   result$Ez <- Ez
-  result$Ez_list <- Ez_list
   result$Group <- t(Ez)
   result$nll.data=nll.data
-  result$nLB.data=nLB.data
-  result$EM_lambda_optim_message=EM_lambda_optim_message
-  result$EM_alpha_list=EM_alpha_list
-  #mixture_list <- mixture_output(binned.data, weights, lambda, err)
-  #result$Mixture <- list(Weight=mixture_list$Mixture)
   result$Mixture <- list(Weight=weights/N)
   
 
@@ -394,12 +262,9 @@ dmn.em <- function(kmeans.res, Wx, bin.width, S, alpha, M, K, Lx,  N, verbose,
     print(table(apply(result$Group, 1, which.max)))
   }
   
-  #result$Fit <- list(Estimate=t(mixture_list$Estimate),
-  #                   Upper=t(mixture_list$Upper),
-  #                   Lower=t(mixture_list$Lower))
-  
+    
   result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
-  result$Data <- binned.data #shifted and flipped data
+  result$Data <- binned.data 
   
   result
 }
