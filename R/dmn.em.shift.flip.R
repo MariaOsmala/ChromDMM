@@ -237,12 +237,9 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   
   nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
   P <- K*sum(La)+K-1 #k=S x K x M + (K-1) This should change for different every M_k?
-  #gof.laplace is -log p(X|M_k) 
-  #gof.laplace <- last.nll + 0.5 * logDet - 0.5 * P * log(2.0 * pi); ## last.nll given by neg_log_likelihood, this is approx. -log(X|M_k)
-  gof.laplace <- 0
   gof.BIC <- last.nll + 0.5 * log(N) * P #this is -BIC
   gof.AIC <- last.nll + P #this is 0.5*AIC
-  gof <- c(NLE=last.nll, Laplace=gof.laplace, BIC=gof.BIC, AIC=gof.AIC)  #goodness of fit
+  gof <- c(NLE=last.nll, BIC=gof.BIC, AIC=gof.AIC)  #goodness of fit
   
   result <- list()
   

@@ -185,7 +185,7 @@ mixture <-
 
 goodnessOfFit <- function(object, ...) object@goodnessOfFit
 
-laplace <- function(object, ...) goodnessOfFit(object)[["Laplace"]]
+#laplace <- function(object, ...) goodnessOfFit(object)[["Laplace"]]
 
 .AIC.DMN <- function(object, ...) goodnessOfFit(object)[["AIC"]]
 

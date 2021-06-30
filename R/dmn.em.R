@@ -200,47 +200,12 @@ dmn.em <- function(kmeans.res, Wx, bin.width, alpha, M, K, Lx,  N, verbose,
   
   
   # Model selection
-  # hessian
-  if (verbose)
-    cat("  Hessian\n")
   nll.data<-data.frame(iter=which(sapply(nll_list, length)!=0), nll=unlist(nll_list[which(sapply(nll_list, length)!=0)]))
   
-  #   err <- matrix(0, K, S)
-  logDet <- 0
-  
-  for (m in 1:M) {
-    for (k in 1:K) {
-      if (k > 1) #Why start adding from index k=2???? Cause e.g. weight \pi_1 depends on the rest of the weights (they sum up to one)
-        logDet <- logDet + 2.0 * log(N) - log(weights[k]) #unnormalized weights, why this added? This is the log determinant of the first block in hessian, terms corresponding to \pi_k
-      #The computation of Hessian misses the regularization prior terms?
-      
-      hess <- hessian(lambda[[m]][k, ], Ez[k, ], binned.data[[m]], nu) #LxL matrix
-      #lambda[[m]][k, ], 1xS
-      #Ez[k, ], 1x1000
-      #binned.data[[m]], 1000xS
-      #nu 1
-      ## det(H)=det(L)det(U). LU is the lower-upper decomposition of H. L is a lower triangular matrix, U is upper triangular matrix
-      ##The determinant of a lower triangular matrix (or an upper triangular matrix) is the product of the diagonal entries.
-      luhess <- Matrix::lu(hess) #LU decomposition
-      invHess <- Matrix::solve(luhess) #inverse of Hessian matrix
-      #       err[k, ] <- diag(invHess)
-      #L has only ones in the diagonal so its determinant not computed
-      #Why absolute, the determinant can be also negative?    
-      #diagonal elements of U matrix
-      #should this be det(as.matrix(Matrix::expand(luhess)$P))*Matrix::diag( Matrix::expand(luhess)$U)
-      #Is the final determinant always positive, should be if we are in the extreme value
-      #if the determinant is negative, this is a saddle point
-      #determinant can not be zero ->
-      logDet <- logDet + sum( log( abs( Matrix::diag( Matrix::expand(luhess)$U ) ) ) )
-    }
-  }
-  
   P <- K*sum(Lx)+K-1 #k=S x K x M + (K-1) This should change for different every M_k?
-  #gof.laplace is -log p(X|M_k) 
-  gof.laplace <- last.nll + 0.5 * logDet - 0.5 * P * log(2.0 * pi); ## last.nll given by neg_log_likelihood, this is approx. -log(X|M_k)
   gof.BIC <- last.nll + 0.5 * log(N) * P #this is -BIC
   gof.AIC <- last.nll + P #this is 0.5*AIC
-  gof <- c(NLE=last.nll, LogDet=logDet, Laplace=gof.laplace, BIC=gof.BIC, AIC=gof.AIC)  #goodness of fit
+  gof <- c(NLE=last.nll, BIC=gof.BIC, AIC=gof.AIC)  #goodness of fit
   
   result <- list()
   
