@@ -20,10 +20,6 @@ Collate:
   dmn.em.flip.R
   dmn.em.shift.R
   dmn.em.shift.flip.R
-  dmn.em.gradient.descent.R
-  dmn.em.shift.gradient.descent.R
-  gradientDescent.R
-  gradientDescent.shift.R
   dmngroup.R
   roc.R
   dmn_main.R

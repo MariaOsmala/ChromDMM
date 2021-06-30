@@ -304,8 +304,8 @@ DMN.cluster <- function(count.data,
                         EM.maxit=250, EM.threshold=1e-6,
                         soft.kmeans.maxit=1000, soft.kmeans.stiffness=50,
                         randomInit=T,
-                        maxNumOptIter=1000, numOptRelTol=1e-12,init="random", method="BFGS", 
-                        optim.options=NULL, hessian=FALSE,..., learning.rate=1e-3) {
+                        maxNumOptIter=1000, numOptRelTol=1e-12,init="random", 
+                        optim.options=NULL, hessian=FALSE,...) {
 
   if (seed != F) set.seed(seed)
 
@@ -372,9 +372,6 @@ DMN.cluster <- function(count.data,
     m
   }, count.data, seq_len(M))
 
-  #maxlimits <- left.limit * bin.width #120
-  #minlimits <- -right.limit * bin.width #-120
-
   # add nonbinned data, windows, shifts and bin width as attributes
   # to the binned data
   attr(binned.data, 'nonbinned') <- count.data #N x window matrices
@@ -382,10 +379,7 @@ DMN.cluster <- function(count.data,
   attr(binned.data, 'shifts') <- numeric(N) #optimal shift state
   attr(binned.data, 'flips') <- logical(N) #boolean vector, optimal flip state
   attr(binned.data, 'bin.width') <- bin.width
-  #attr(binned.data, 'shift.limits') <- matrix(c(minlimits, maxlimits),
-  #                                            nrow=N, ncol=2, byrow=T)
-
-  #bin data and define shifting function
+  
   #extract_binned_signal converts numerical matrix into an integer matrix
   #Does nothing?
   binned.data <-extract_binned_signal(binned.data, seq_len(N)) #binned.data$H3K4me1: NxS matrix
@@ -435,96 +429,6 @@ DMN.cluster <- function(count.data,
     #kmeans++ init
   }
   
-  
-  # if(init=="squeeze"){
-  #   kmeans.binned.data <- mapply(function(mat, name){
-  #     t( apply(mat, 1, function(row) {
-  #       s<-sum(row);
-  #       if(s!=0) row/s else row}) )
-  #   }, binned.data, names(binned.data), SIMPLIFY=F)
-  #   
-  #   
-  #   #concatenate data for soft-kmeans
-  #   kmeans.binned.data <- do.call(cbind, kmeans.binned.data)
-  #   #K=2
-  #   kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
-  #   kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
-  #   
-  #   #rowNorm=F, the rows were already normalized
-  #   kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose, #This is in dmn.cpp file
-  #                             randomInit=randomInit, centers=kmeanspp.centers,
-  #                             stiffness=soft.kmeans.stiffness, rowNorm=F)
-  #   #list of 3
-  #   #$centers
-  #   #$weights
-  #   #$labels K x N matrix
-  #   rm(kmeans.binned.data)
-  #   
-  #   if(verbose) {
-  #     cat('k-means hard label frequencies:')
-  #     print(table(apply(kmeans.res$labels, 2, which.max)))
-  #   }
-  #   alpha <- kmeans.res$centers #K x (M*S)
-  #   stopifnot(!is.na(alpha), !is.infinite(alpha))
-  #   
-  #   #split centers given by soft kmeans, i.e. unconcatenate
-  #   col.ends <- cumsum(Lx)
-  #   col.starts <- col.ends - Lx + 1
-  #   alpha <- mapply(function(s,e)alpha[,s:e,drop=F], col.starts, col.ends, SIMPLIFY = F) #List of M
-  #   
-  #   squeezed_alpha <- list()
-  #   for(m in 1:M){
-  #     squeezed_alpha[[ names(binned.data)[m] ]]=matrix(0, nrow=K, ncol=Lx[m])
-  #     
-  #     center.left=Lx[m]/2
-  #     center.right=center.left+1
-  #     for(k in 1:K){
-  #       squeezed_alpha[[ names(binned.data)[m] ]][k,]=alpha[[names(binned.data)[m] ]][k,]
-  #       
-  #       #floor(S/2) first non-zero elements
-  #       first.nonzero=which(alpha[[names(binned.data)[m]] ][k,]!=0)[1:floor(S/2)]
-  #       last.nonzero=tail(which(alpha[[names(binned.data)[m]] ][k,]!=0), floor(S/2))
-  #       
-  #       inner.index=seq( (first.nonzero[1]+1), ( tail(last.nonzero,1)-1), 1 )
-  #       
-  #       value.index=as.vector(c(rep(first.nonzero[1], floor(S/2) ),
-  #                               seq(first.nonzero[1]+1, center.left-1,2 ),
-  #                               seq(center.right+1, tail(last.nonzero,1)-1,2 ),
-  #                               rep(tail(last.nonzero,1), floor(S/2) )))
-  #       
-  #       squeezed_alpha[[ names(binned.data)[m] ]][k, inner.index]=alpha[[names(binned.data)[m]] ][k,value.index]
-  #       squeezed_alpha[[ names(binned.data)[m] ]][k,]=squeezed_alpha[[ names(binned.data)[m] ]][k,]/sum(squeezed_alpha[[ names(binned.data)[m] ]][k,])
-  #     }
-  #     colnames(squeezed_alpha[[ names(binned.data)[m] ]]) <- paste0('bin', seq_len(Lx[m]))
-  #   }
-  #   
-  #   alpha=squeezed_alpha 
-  #   #squeeze init
-  #   
-  # }
-  # 
-  if(init=="uniform"){
-    
-    alpha <- list()
-    for(m in 1:M){
-      alpha[[ names(binned.data)[m] ]]=matrix(0, nrow=K, ncol=Lx[m])
-      for(k in 1:K){
-        alpha[[ names(binned.data)[m] ]][k,]=rep(1, Lx[m])/Lx[m]
-      }
-      colnames(alpha[[ names(binned.data)[m] ]]) <- paste0('bin', seq_len(Lx[m]))
-    }
-    
-    
-    
-    kmeans.res <- list()
-    kmeans.res$labels=matrix(0, nrow=K, ncol=N)
-    for(k in 1:(K-1)){
-      kmeans.res$labels[k,]=sample( seq(0.1,0.9,0.1), N, replace=TRUE)
-    }
-    kmeans.res$labels[K,]=1-colSums(kmeans.res$labels)
-    colnames(kmeans.res$labels) <- paste0('loc', seq_len(N))
-  }
-  
   if(init=="random"){
     means.ind=sample.int(N, size=K, replace=TRUE)
     alpha <- list()
@@ -546,28 +450,21 @@ DMN.cluster <- function(count.data,
   }
   
   if(shift.reads==TRUE && flip==TRUE){
-    print("shifting and flipping")
+   
     result=dmn.em.shift.flip(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, S=S, xi=xi, zeta=zeta, alpha=alpha, 
                         M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                         maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
                         eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                        EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, optim.options=optim.options, hessian=hessian)
+                        EM.maxit=EM.maxit, EM.threshold=EM.threshold,  optim.options=optim.options, hessian=hessian)
     
   }else if(shift.reads==TRUE && flip==FALSE){ #only shift
   
-    if(method=="gradient.descent"){
-      result=dmn.em.shift.gradient.descent(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, S=S, xi=xi, alpha=alpha, 
-                          M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
-                          maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
-                          eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                          EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method,  learning.rate=learning.rate)
-    }else{
       result=dmn.em.shift(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, S=S, xi=xi, alpha=alpha, 
                           M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                           maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
                           eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                          EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, optim.options=optim.options, hessian=hessian)
-    }
+                          EM.maxit=EM.maxit, EM.threshold=EM.threshold, optim.options=optim.options, hessian=hessian)
+    
   
     
   }else if(shift.reads==FALSE && flip==TRUE){ #only flip
@@ -576,20 +473,16 @@ DMN.cluster <- function(count.data,
                         M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                         maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
                         eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                        EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, optim.options=optim.options, hessian=hessian)
+                        EM.maxit=EM.maxit, EM.threshold=EM.threshold, optim.options=optim.options, hessian=hessian)
     
     
   }else{ # shift.reads==FALSE && flip==FALSE
     
-    if(method=="gradient.descent"){
-      result = dmn.em.gradient.descent(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
-                      maxNumOptIter=maxNumOptIter, binned.data=binned.data, eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                      EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method,  learning.rate=learning.rate)
-    }else{
+    
       result = dmn.em(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                       maxNumOptIter=maxNumOptIter, binned.data=binned.data, eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
-                      EM.maxit=EM.maxit, EM.threshold=EM.threshold, method=method, optim.options=optim.options, hessian=hessian)
-    }
+                      EM.maxit=EM.maxit, EM.threshold=EM.threshold, optim.options=optim.options, hessian=hessian)
+    
     
   }
 
