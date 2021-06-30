@@ -126,7 +126,7 @@ optimise_lambda_k_shift <- function(LambdaK, data, Z, hkm, gradient, eta, nu,
   fn=neg_log_evidence_lambda_pi_shift
   gr=neg_log_derive_evidence_lambda_pi_shift
   
-  optim.result <- optim(LambdaK,fn=fn, gr=gr, lambda_iter, params,
+  optim.result <- optim(LambdaK,fn=fn, gr=gr, params,
                         method=method, control = optim.options, hessian=hessian)
 
   
@@ -186,7 +186,7 @@ optimise_lambda_k_flip <- function(LambdaK, data, Z, hkm, gradient, eta, nu,
   gr=neg_log_derive_evidence_lambda_pi_flip
   
   
-  optim.result <- optim(LambdaK,fn=fn, gr=gr, lambda_iter, params,
+  optim.result <- optim(LambdaK,fn=fn, gr=gr, params,
                         method=method, control = optim.options, hessian=hessian)
   
   
@@ -243,7 +243,7 @@ optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, gradient, eta, n
   gr=neg_log_derive_evidence_lambda_pi_shift_flip
   
   optim.result <- optim(LambdaK, fn=fn,
-                        gr=gr, lambda_iter, params,
+                        gr=gr, params,
                         method=method,  control = optim.options, hessian=hessian)
   if(optim.result$convergence != 0){
     warning('!!!!! Numerical Optimization did not converge !!!!!!!\n')

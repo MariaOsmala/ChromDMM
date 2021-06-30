@@ -218,9 +218,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
       print("Warning: Neg.LL does not decrease!!!")
     }
     
-    if(nLB.real.change < -numOptRelTol){
-      print("Warning: Neg.LB does not decrease!!!")
-    }
+   
     
     
     last.nll <- nll

@@ -274,37 +274,19 @@ plot.clusters <- function(data, labels, ..., fun = mean, rotatex = T,
 # 
 # }
 
-plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=1, plot.det=TRUE, plot.gradient=TRUE) {
+plot.EM <- function(fit,  smoothness.scale='free', skip=1, plot.det=TRUE, plot.gradient=TRUE) {
   
-  #EM_lambda_optim_message=fit[[2]]@EM_lambda_optim_message
-  #fit=fit[[2]]
-  EM.iters<-which(sapply(EM_lambda_optim_message, length)!=0)-1
+ 
   K=ncol(fit@fit$Estimate[[1]])
   M=length(fit@Data)
-  EM.nll.diagnostics<-data.frame()
+   
   
-  for(mi in 1:M){
-    for(ki in 1:K){
-      for(iter in (0+skip):EM.iters[length(EM.iters)]){
-        nll.diag<-data.frame(Datatype=names(fit@Data)[mi],
-                             Component=ki,
-                             EM.iter=iter,
-                             nll=EM_lambda_optim_message[[iter+1]][[mi]][[ki]]$value)
-        if(plot.det==TRUE){
-          nll.diag$detHes=det(EM_lambda_optim_message[[iter+1]][[mi]][[ki]]$hessian)
-        }
-        EM.nll.diagnostics <- rbind(EM.nll.diagnostics, nll.diag)
-      }
-      
-    }
-  }
-  #plot hkm values
   
   comp.labels=paste0("Cluster ", seq(1,K,1))
   names(comp.labels)=seq(1,K,1)
   
   
-  nll.plot <- ggplot(EM.nll.diagnostics,
+  nll.plot <- ggplot(fit@EM.diagnostics,
                      aes(EM.iter, nll, )) +
     geom_line(aes(group=Datatype)) +
     geom_point(shape=1) +
@@ -317,8 +299,8 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     theme_minimal()
   
   if(plot.det==TRUE){
-  detHes.plot <- ggplot(EM.nll.diagnostics,
-                        aes(EM.iter, detHes, )) +
+  detHes.plot <- ggplot(fit@EM.diagnostics,
+                        aes(EM.iter, detH, )) +
     geom_line(aes(group=Datatype)) +
     geom_point(shape=1) +
     facet_wrap(~Datatype+Component, scale=smoothness.scale, ncol=K, labeller=labeller(Component=comp.labels)) +
@@ -331,12 +313,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
   }
   
   
-  EM.diagnostics <- fit@EM.diagnostics
-  
-  
-  
-  
-  hkm.plot <- ggplot(EM.diagnostics,
+  hkm.plot <- ggplot(fit@EM.diagnostics,
                      aes(seq_along(hkm), hkm, color=EM.iter)) +
     geom_line(aes(group=Datatype)) +
     geom_point(shape=1) +
@@ -348,7 +325,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
     theme_minimal()
   
   if(plot.gradient==TRUE){
-  gradient.plot <- ggplot(EM.diagnostics,
+  gradient.plot <- ggplot(fit@EM.diagnostics,
                           aes(seq_along(gradient), gradient, color=EM.iter)) +
     geom_line(aes(group=Datatype)) +
     geom_point(shape=1) +
@@ -362,7 +339,7 @@ plot.EM <- function(fit, EM_lambda_optim_message, smoothness.scale='free', skip=
   }
   
   #plot number of num.opt. iterations
-  nop <- ggplot(EM.diagnostics, aes(EM.iter, NO.iter.count)) +
+  nop <- ggplot(fit@EM.diagnostics, aes(EM.iter, NO.iter.count)) +
     geom_line(aes(color=factor(Datatype))) +
     geom_point(aes(color=factor(Datatype))) +
     #geom_smooth(method='gam', formula=y~s(x, k=k, bs='cs')) +
