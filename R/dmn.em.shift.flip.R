@@ -30,8 +30,8 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   
   for(i in 1:N){
     for(k in 1:K){
-      Ez2[[1]][k,,i]=Ez[k,i]*xi*zeta[1]
-      Ez2[[2]][k,,i]=Ez[k,i]*xi*zeta[2]
+      Ez2[[1]][k,,i]=Ez[k,i]*xi[i,]*zeta[i,1]
+      Ez2[[2]][k,,i]=Ez[k,i]*xi[i,]*zeta[i,2]
     }
   }
   

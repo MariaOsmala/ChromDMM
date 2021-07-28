@@ -28,7 +28,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   Ez2 <- array(0,dim=c(K,S,N))#This is 3D for each i
   for(i in 1:N){
     for(k in 1:K){
-      Ez2[k,,i]=xi*Ez[k,i]
+      Ez2[k,,i]=xi[i,]*Ez[k,i]
       Ez2[k,,i]=Ez2[k,,i]/sum(Ez2[k,,i])
     }
   }
@@ -63,7 +63,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
       gradient<- vector(mode = 'list', maxNumOptIter+1)
       #the lambda_{kj}^{(m)} can be optimized for each k and m separately
      
-        optim.result=optimise_lambda_k_shift(LambdaK=lambda[[m]][k,],
+      optim.result=optimise_lambda_k_shift(LambdaK=lambda[[m]][k,],
                                      data=binned.data[[m]],
                                      Z=Ez[k,,],
                                      hkm=hkm,

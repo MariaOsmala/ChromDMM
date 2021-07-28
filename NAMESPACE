@@ -12,7 +12,7 @@ importFrom(e1071, matchClasses)
 
 exportClasses(DMN, DMNGroup)
 export(dmn, dmngroup,
-       goodnessOfFit, laplace, mixturewt, mixture, heatmapdmn,
+       goodnessOfFit, mixturewt, mixture, heatmapdmn,
        cvdmngroup, roc, csubset, shift.and.flip.signal,
        ## S4 generics
        fitted, predict, plot.clusters, bin_signal, extract_binned_signal,

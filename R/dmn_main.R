@@ -269,6 +269,8 @@ optimise_lambda_k_shift_flip <- function(LambdaK, data, Z, hkm, gradient, eta, n
 #' @param seed default false
 #' @param shift default false
 #' @param flip default false
+#' @xi For global shift prior, xi is matrix of size 1 x S. For sample-wise shift prior, xi is matrix of N x S. default NULL
+#' @zeta For global flip prior, zeta is matrix of size 1 x 2. For sample-wise flip prior, zeta is matrix of N x 2. default NULL
 #' @param eta default 0.1
 #' @param nu default 0.1
 #' @param etah default 0
@@ -326,6 +328,22 @@ DMN.cluster <- function(count.data,
   if (shift.reads && ( S%%2 == 0 || S==1 ))
     stop('Number of shift states must be odd and at least 3')
 
+  if(!is.null(zeta)){
+    if(nrow(zeta)==1){
+      zeta=matrix(rep( zeta,times=N), N, 2, byrow=TRUE) #N x 2
+      
+    }
+    
+  }
+  
+  if(!is.null(xi)){
+    if(nrow(xi)==1){
+      xi=matrix(rep( xi,times=N), N, 2, byrow=TRUE) #N x S
+      
+    }
+    
+  }
+  
   M <- length(count.data)
 
   if (M < 1)

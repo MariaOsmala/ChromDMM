@@ -331,16 +331,16 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift_flip(Rcpp::NumericVe
 
 // [[Rcpp::export]]
 Rcpp::List calc_z_shift_flip(Rcpp::List Z, Rcpp::List data,
-                                Rcpp::NumericVector W, Rcpp::NumericVector xi, Rcpp::NumericVector zeta, Rcpp::List Lambda)
+                                Rcpp::NumericVector W, Rcpp::NumericMatrix xi, Rcpp::NumericMatrix zeta, Rcpp::List Lambda)
 {
   // Z is K x S x N
-  int i, j, k, m, s, f, l;
+  int i, j, k, m, s, l;
   Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]);
   const int N = temp.nrow();
   const int K = W.length(); // number of clusters
   const int M = data.size();
-  const int S = xi.length();
-  const int F = zeta.length();
+  const int S = xi.ncol();
+  const int F = zeta.ncol();
   
   arma::Cube<double> Z_1=as<arma::cube>(Z[0]);
   arma::Cube<double> Z_2=as<arma::cube>(Z[1]);
@@ -439,8 +439,8 @@ Rcpp::List calc_z_shift_flip(Rcpp::List Z, Rcpp::List data,
           Z_2(k, s, i) += (-(evidence_matrix_2(m, k, s) - offset[m])); //why offset is substracted?? For numerical reasons?
         }
         
-        Z_1(k, s, i) = W[k]*xi[s] *zeta[0]* exp(Z_1(k, s, i)); //back from logaritm, multiply by the shift probs i.e. \xi_k
-        Z_2(k, s, i) = W[k]*xi[s] *zeta[1]* exp(Z_2 (k, s, i)); //back from logaritm, multiply by the shift probs i.e. \xi_k
+        Z_1(k, s, i) = W[k] * xi(i,s) * zeta(i,0) * exp(Z_1(k, s, i)); //back from logaritm, multiply by the shift probs i.e. \xi_k
+        Z_2(k, s, i) = W[k] * xi(i,s) * zeta(i,1) * exp(Z_2 (k, s, i)); //back from logaritm, multiply by the shift probs i.e. \xi_k
         dSum += Z_1(k, s, i); //normalization constant
         dSum += Z_2(k, s, i); //normalization constant
       } //s
@@ -460,16 +460,17 @@ Rcpp::List calc_z_shift_flip(Rcpp::List Z, Rcpp::List data,
 }
 
 // [[Rcpp::export]]
-double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector xi, Rcpp::NumericVector zeta, Rcpp::List Lambda,
-                                Rcpp::List data, double eta, double nu,
-                                double etah, double nuh, int S)
+double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericMatrix xi, 
+                                     Rcpp::NumericMatrix zeta, Rcpp::List Lambda,
+                                     Rcpp::List data, double eta, double nu,
+                                     double etah, double nuh, int S)
 {
   
   Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]); // N x Lx
   const int N = temp.nrow();
   const int K = W.length();
   const int M = data.size();
-  int i, j, k, m, s, f;
+  int i, j, k, m, s;
   
   Rcpp::NumericVector Lx(M);
   Rcpp::NumericVector La(M);
@@ -588,10 +589,10 @@ double neg_log_likelihood_shift_flip(Rcpp::NumericVector W, Rcpp::NumericVector 
       for (s = 0; s < S; s++) {
         dProb_F(k,s)=0.0;
         
-        dProb_F(k,s) +=zeta[0]*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore_1.slice(s).col(k) ) )) -sum(offset) );
-        dProb_F(k,s) +=zeta[1]*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore_2.slice(s).col(k) ) )) -sum(offset) );
+        dProb_F(k,s) +=zeta(i,0)*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore_1.slice(s).col(k) ) )) -sum(offset) );
+        dProb_F(k,s) +=zeta(i,1)*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore_2.slice(s).col(k) ) )) -sum(offset) );
         
-        dProb[k] += xi[s]*dProb_F(k,s);
+        dProb[k] += xi(i,s)*dProb_F(k,s);
         
       }
       
@@ -854,15 +855,15 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_flip(Rcpp::NumericVector p
 
 // [[Rcpp::export]]
 arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
-                                Rcpp::NumericVector W, Rcpp::NumericVector zeta, Rcpp::List Lambda)
+                                Rcpp::NumericVector W, Rcpp::NumericMatrix zeta, Rcpp::List Lambda)
 {
   // Z is K x 2 x N
-  int i, j, k, m, f;
+  int i, j, k, m;
   Rcpp::IntegerMatrix temp = as<Rcpp::IntegerMatrix>(data[0]);
   const int N = temp.nrow();
   const int K = W.length(); // number of clusters
   const int M = data.size();
-  const int F = zeta.length();
+  const int F = zeta.ncol();
   
   arma::Cube<double> evidence_matrix(M, K, F); 
   
@@ -935,8 +936,8 @@ arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
           Z(k, 0, i) += (-(evidence_matrix(m, k, 0) - offset[m])); 
           Z(k, 1, i) += (-(evidence_matrix(m, k, 1) - offset[m])); 
         }
-        Z(k, 0, i) = W[k]*zeta[0] * exp(Z(k, 0, i)); 
-        Z(k, 1, i) = W[k]*zeta[1] * exp(Z(k, 1, i));
+        Z(k, 0, i) = W[k] * zeta(i,0) * exp(Z(k, 0, i)); 
+        Z(k, 1, i) = W[k] * zeta(i,1) * exp(Z(k, 1, i));
         dSum += Z(k, 0, i); //normalization constant
         dSum += Z(k, 1, i); //normalization constant
      
@@ -951,8 +952,13 @@ arma::Cube<double> calc_z_flip(arma::Cube<double> Z, Rcpp::List data,
   return Z; //K x 2 x N matrix
 }
 
+
+/* zeta is N x 2 matrix
+ * Sample-wise prior for flip state implemented
+ *
+ */
 // [[Rcpp::export]]
-double neg_log_likelihood_flip(Rcpp::NumericVector W, Rcpp::NumericVector zeta, Rcpp::List Lambda,
+double neg_log_likelihood_flip(Rcpp::NumericVector W, Rcpp::NumericMatrix zeta, Rcpp::List Lambda,
                           Rcpp::List data, double eta, double nu,
                           double etah, double nuh)
 {
@@ -960,8 +966,7 @@ double neg_log_likelihood_flip(Rcpp::NumericVector W, Rcpp::NumericVector zeta, 
   const int N = temp.nrow();
   const int K = W.length();
   const int M = data.size();
-  const int F = zeta.length();
-  int i, j, k, m, f;
+  int i, j, k, m;
   
   Rcpp::NumericVector L(M);
   for (m = 0; m < M; m++) {
@@ -1060,8 +1065,8 @@ double neg_log_likelihood_flip(Rcpp::NumericVector W, Rcpp::NumericVector zeta, 
     Rcpp::NumericVector dProb_F(K);
     for (k = 0; k < K; k++) {
       dProb_F[k]=0.0;
-      dProb_F[k] += zeta[0]*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(0).col(k) ) )) - sum(offset) );
-      dProb_F[k] += zeta[1]*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(1).col(k) ) )) - sum(offset) );
+      dProb_F[k] += zeta(i,0)*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(0).col(k) ) )) - sum(offset) );
+      dProb_F[k] += zeta(i,1)*exp( Rcpp::sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(1).col(k) ) )) - sum(offset) );
       // normalize mixing weights
       double piK = W[k]/Rcpp::sum(W); 
       dProb += piK*dProb_F[k];
@@ -1401,7 +1406,7 @@ Rcpp::NumericVector neg_log_derive_evidence_lambda_pi_shift(Rcpp::NumericVector 
 
 // [[Rcpp::export]]
 arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
-                     Rcpp::NumericVector W, Rcpp::NumericVector xi, Rcpp::List Lambda)
+                     Rcpp::NumericVector W, Rcpp::NumericMatrix xi, Rcpp::List Lambda)
 {
   // Z is K x S x N
   int i, j, k, m, s, l;
@@ -1409,7 +1414,7 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
   const int N = temp.nrow();
   const int K = W.length(); // number of clusters
   const int M = data.size();
-  const int S = xi.length();
+  const int S = xi.ncol();
   
   arma::Cube<double> evidence_matrix(M, K, S); 
  
@@ -1484,7 +1489,7 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
           Z(k, s, i) += (-(evidence_matrix(m, k, s) - offset[m])); //why offset is substracted?? For numerical reasons?
         }
         
-        Z(k, s, i) = W[k]*xi[s] * exp(Z(k, s, i)); //back from logaritm, multiply by the shift probs i.e. \xi_k
+        Z(k, s, i) = W[k]*xi(i,s) * exp(Z(k, s, i)); //back from logaritm, multiply by the shift probs i.e. \xi_k
         dSum += Z(k, s, i); //normalization constant
       } //s
     } // k
@@ -1510,7 +1515,7 @@ arma::Cube<double> calc_z_shift(arma::Cube<double> Z, Rcpp::List data,
  */
 
 // [[Rcpp::export]]
-double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, Rcpp::List Lambda,
+double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericMatrix xi, Rcpp::List Lambda,
                           Rcpp::List data, double eta, double nu,
                           double etah, double nuh, int S)
 {
@@ -1624,7 +1629,7 @@ double neg_log_likelihood_shift(Rcpp::NumericVector W, Rcpp::NumericVector xi, R
       dProb_S[k]=0.0;
       for (s = 0; s < S; s++) {
         
-        dProb_S[k] += xi[s]*exp( sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(s).col(k) ) )) - sum(offset) ); //sum of column k over m rows
+        dProb_S[k] += xi(i,s)*exp( sum( as<Rcpp::NumericVector>(Rcpp::wrap( LogStore.slice(s).col(k) ) )) - sum(offset) ); //sum of column k over m rows
       }
       // normalize mixing weights
       double piK = W[k]/Rcpp::sum(W);

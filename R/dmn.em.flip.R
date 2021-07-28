@@ -11,9 +11,7 @@ dmn.em.flip <- function(kmeans.res, Wx, bin.width, zeta, alpha, M, K, Lx,  N, ve
   
   for(i in 1:N){
     for(k in 1:K){
-      print(Ez[k,i] )
-      print(zeta*Ez[k,i] )
-      Ez2[k,,i]=zeta*Ez[k,i]
+      Ez2[k,,i]=zeta[i,]*Ez[k,i]
       Ez2[k,,i]=Ez2[k,,i]/sum(Ez2[k,,i])
     }
   }

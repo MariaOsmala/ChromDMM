@@ -24,11 +24,13 @@ setClass("DMN",
 #' each element is a N x window matrix. If matrix, converted to a list
 #' @param K vector of the number of clusters
 #' @param bin.width bin_size 40 (default 50)
-#' @param S the number of shift states, if shift true, this needs to be odd number of at least 3, default 1(no shift)
+#' @param S the number of shift states, if shift true, this needs to be odd number of at least 3, default 1 (no shift)
 #' @param verbose Print progress as "DMN, K=%d, M=%d, Iteration=%d", k, M, r) default FALSE
 #' @param seed default false
 #' @param shift default false
 #' @param flip default false
+#' @xi For global shift prior, xi is matrix of size 1 x S. For sample-wise shift prior, xi is matrix of N x S? default NULL
+#' @zeta For global flip prior, zeta is matrix of size 1 x 2. For sample-wise flip prior, zeta is matrix of N x 2. default NULL
 #' @param eta default 0.1
 #' @param nu default 0.1
 #' @param etah default 0
@@ -42,7 +44,7 @@ setClass("DMN",
 #' @param maxNumOptIter default 1000
 #' @param numOptRelTol default 1e-12
 #' @param parallel default true
-#'@param init default "random"
+#' @param init default "random"
 #'
 #' @return
 #' @export
