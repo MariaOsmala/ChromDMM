@@ -338,8 +338,8 @@ DMN.cluster <- function(count.data,
   
   if(!is.null(xi)){
     if(nrow(xi)==1){
-      xi=matrix(rep( xi,times=N), N, 2, byrow=TRUE) #N x S
-      
+      xi=matrix(rep( xi,times=N), N, S, byrow=TRUE) #N x S
+      #print(dim(xi))
     }
     
   }
