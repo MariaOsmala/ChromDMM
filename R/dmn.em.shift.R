@@ -244,7 +244,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   
  
   
-   P <- K*sum(La)+K-1 #k=S x K x M + (K-1) This should change for different every M_k?
+   P <- K*sum(La)+K-1 #k=La x K x M + (K-1) This should change for different every M_k?
    gof.BIC <- last.nll + 0.5 * log(N) * P #this is -BIC
    gof.AIC <- last.nll + P #this is 0.5*AIC
    gof <- c(NLE=last.nll, BIC=gof.BIC, AIC=gof.AIC)  

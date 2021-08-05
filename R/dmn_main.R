@@ -328,6 +328,8 @@ DMN.cluster <- function(count.data,
   if (shift.reads && ( S%%2 == 0 || S==1 ))
     stop('Number of shift states must be odd and at least 3')
 
+  N <- nrow(count.data[[1]]) #number of samples
+  
   if(!is.null(zeta)){
     if(nrow(zeta)==1){
       zeta=matrix(rep( zeta,times=N), N, 2, byrow=TRUE) #N x 2
@@ -361,7 +363,7 @@ DMN.cluster <- function(count.data,
   #disable GSL error handler, it aborts the program in case of an error
   disable_gsl_error_handler()
 
-  N <- nrow(count.data[[1]]) #number of samples
+  
   Wx <- sapply(count.data, ncol) #original window W_x
 
   if (sum(Wx %% bin.width) != 0)
