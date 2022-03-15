@@ -40,7 +40,7 @@ setClass("DMN",
 #' @param soft.kmeans.maxit default 1000
 #' @param soft.kmeans.stiffness default 50
 #' @param randomInit default true
-#' @param repetition default 4
+#' @param repetition The number of repetitions for training the model, choose the one with the best BIC default 4
 #' @param maxNumOptIter default 1000
 #' @param numOptRelTol default 1e-12
 #' @param parallel default true
@@ -82,6 +82,7 @@ dmn <-
     
     M <- length(count) #number of chromatin features
 
+    # if random initialization is FALSE or seed is TRUE or number of clusters 1
     if ( (randomInit==F) || seed || ( (length(K) == 1) && (K==1) ) ){
       repetition<-1
     }

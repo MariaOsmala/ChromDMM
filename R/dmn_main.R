@@ -309,7 +309,7 @@ DMN.cluster <- function(count.data,
                         maxNumOptIter=1000, numOptRelTol=1e-12,init="random", 
                         optim.options=NULL, hessian=FALSE,...) {
 
-  if (seed != F) set.seed(seed)
+  if (seed != F) set.seed(seed) #seed can be integer/FALSE/TRUE/NULL(no initilization)
 
   if(!is.list(count.data))
     stop('count.data must be a list!')
@@ -418,13 +418,21 @@ DMN.cluster <- function(count.data,
       }, binned.data, names(binned.data), SIMPLIFY=F)
   
     
-    #concatenate data for soft-kmeans
+    #concatenate data for soft-kmeans, what if it is already concatenated
     kmeans.binned.data <- do.call(cbind, kmeans.binned.data)
     #K=2
     kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
     kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
     
+    #check that the number of random cluster centers is K
+    while(nrow(kmeanspp.centers)!=K){
+      kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
+      kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
+    }
+    
+    
     #rowNorm=F, the rows were already normalized
+    #randomInit does not matter here as the centers are already initialized above
     kmeans.res <- soft_kmeans(kmeans.binned.data, K, verbose=verbose, #This is in dmn.cpp file
                               randomInit=randomInit, centers=kmeanspp.centers,
                               stiffness=soft.kmeans.stiffness, rowNorm=F)

@@ -32,3 +32,4 @@ dependencies:
   - r-clues 
   - r-ggridges 
   - r-rcpparmadillo
+  - bioconductor-complexheatmap
