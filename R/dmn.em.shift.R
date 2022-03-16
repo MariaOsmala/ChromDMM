@@ -271,7 +271,7 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
   
   #add shifting information
-  cl=apply(results$Group, 1, which.max)
+  cl=apply(result$Group, 1, which.max)
   cl_ind=list()
   for(k in 1:K){
     cl_ind[[k]]=which(cl==k)
