@@ -1,4 +1,4 @@
-useDynLib(DMMChrom, .registration=TRUE)
+useDynLib(ChromDMM, .registration=TRUE)
 
 import(methods, Matrix, grid, ggplot2, plyr, reshape2, mgcv)
 importFrom(stats4, AIC, BIC, summary)

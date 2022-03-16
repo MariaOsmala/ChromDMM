@@ -271,14 +271,17 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
   
   #add shifting information
-  ind=apply(Ez,3,which.max)
-  if(K==1){
-    s=ind
-  }else{
-     k = ((ind-1) %% nrow(Ez[,,1])) + 1 #this is the same as result$Group
-     s = floor((ind-1) / nrow(Ez[,,1])) + 1
+  cl=apply(results$Group, 1, which.max)
+  cl_ind=list()
+  for(k in 1:K){
+    cl_ind[[k]]=which(cl==k)
   }
-    
+  s=rep(0, length(cl))
+  for(k in 1:K){
+    s[ cl_ind[[k]] ]=apply(result$Ez[k,,cl_ind[[k]] ], 2, which.max ) #Ez is KxSxN
+  }
+  
+  
   shift.vector=seq(-floor(S/2),floor(S/2),1)*bin.width
   learned.shift.amounts=shift.vector[s]
   
@@ -297,6 +300,6 @@ dmn.em.shift <- function(kmeans.res,  Wx, bin.width, S, xi, alpha, M, K, Lx,  N,
   
   attr(unshifted.binned.data, 'shifts') <- s
   
-  result$Data <- unshifted.binned.data #shifted and ata
+  result$Data <- unshifted.binned.data #shifted and data
   result
 }

@@ -269,15 +269,23 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
 
   result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
   
-  #add shifting information
-  test_func <- function(a){
-    which(a==max(a), arr.ind=TRUE)
-  }
-  ind=t(apply(Ez_final,MARGIN=4, FUN=function(a) test_func(a)))
+  #add shifting and flipping information
   
-  k = ind[,1] #this is the same as apply(result$Group,1,which.max)
-  s = ind[,2]
-  learned.flip.states = ind[,3]
+  cl=apply(results$group, 1, which.max)
+  cl_ind=list()
+  for(k in 1:K){
+    cl_ind[[k]]=which(cl==k)
+  }
+  
+  learned.flip.states=rep(0, length(cl))
+  for(k in 1:cluster_nro){
+    learned.flip.states[ cl_ind[[k]] ]=apply( apply(results$Ez,c(1,3,4),sum)[k,,cl_ind[[k]] ],2,which.max)
+  }
+  
+  s=rep(0, length(cl))
+  for(k in 1:cluster_nro){
+    s[ cl_ind[[k]] ]=apply( apply(results$Ez,c(1,2,4),sum)[k,,cl_ind[[k]]  ],2,which.max) #Ez is KxSx2xN
+  }
   
     
   shift.vector=seq(-floor(S/2),floor(S/2),1)*bin.width

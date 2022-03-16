@@ -15,7 +15,7 @@ dmn.em.flip <- function(kmeans.res, Wx, bin.width, zeta, alpha, M, K, Lx,  N, ve
       Ez2[k,,i]=Ez2[k,,i]/sum(Ez2[k,,i])
     }
   }
-  Ez=Ez2
+  Ez=Ez2 #Ez is Kx2xN
 
   #lambda is log(alpha)
   alpha <- lapply(alpha, function(a){a[a <= 0] <- 1e-6;a})
@@ -232,14 +232,16 @@ dmn.em.flip <- function(kmeans.res, Wx, bin.width, zeta, alpha, M, K, Lx,  N, ve
   result$Fit <- list(Estimate=lapply(lambda, function(x)t(exp(x)))) #alpha parameters
   
   #add flipping information
-  ind=apply(Ez,3,which.max)
-  if(K==1){
-    s=ind
-  }else{
-    k = ((ind-1) %% nrow(Ez[,,1])) + 1 #this is the same as result$Group
-    s = floor((ind-1) / nrow(Ez[,,1])) + 1
+  cl=apply(results$Group, 1, which.max)
+  cl_ind=list()
+  for(k in 1:K){
+    cl_ind[[k]]=which(cl==k)
   }
-  learned.flip.states=s
+  learned.flip.states=rep(0, length(cl))
+  for(k in 1:K){
+    learned.flip.states[ cl_ind[[k]] ]=apply(result$Ez[k,,cl_ind[[k]] ], 2, which.max ) #Ez is Kx2xN
+  }
+  
   
   unflipped.binned.data=binned.data
   for(m in 1:M){
