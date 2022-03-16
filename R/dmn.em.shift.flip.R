@@ -271,7 +271,7 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   
   #add shifting and flipping information
   
-  cl=apply(result$group, 1, which.max)
+  cl=apply(result$Group, 1, which.max)
   cl_ind=list()
   for(k in 1:K){
     cl_ind[[k]]=which(cl==k)
