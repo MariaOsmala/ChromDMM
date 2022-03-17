@@ -1,0 +1,13 @@
+name: ChromDMM
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - r-base
+  - r-essentials
+  - r-devtools
+  - r-optparse
+  - bioconductor-genomicranges
+
+
