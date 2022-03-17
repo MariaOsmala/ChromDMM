@@ -278,12 +278,12 @@ dmn.em.shift.flip <- function(kmeans.res,  Wx, bin.width, S, xi, zeta, alpha, M,
   }
   
   learned.flip.states=rep(0, length(cl))
-  for(k in 1:cluster_nro){
+  for(k in 1:K){
     learned.flip.states[ cl_ind[[k]] ]=apply( apply(result$Ez,c(1,3,4),sum)[k,,cl_ind[[k]] ],2,which.max)
   }
   
   s=rep(0, length(cl))
-  for(k in 1:cluster_nro){
+  for(k in 1:K){
     s[ cl_ind[[k]] ]=apply( apply(result$Ez,c(1,2,4),sum)[k,,cl_ind[[k]]  ],2,which.max) #Ez is KxSx2xN
   }
   
