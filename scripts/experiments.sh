@@ -26,7 +26,7 @@ data="experiment_data/data.RDS"
 bin_size=1
 window=50
 
-RScript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --window $window --verbose TRUE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/simulated_data_fit.RDS"
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 4 --parallel TRUE --output "data_experiments/simulated_data_fit.RDS"
 
 
 #true enhancer data
@@ -45,6 +45,7 @@ data="experiment_data/1000_enhancers_10modifications.Rds"
 
 bin_size=40
 window=2000
+7*5
 
 RScript scripts/run_ChromDMM.R  --data $data --cluster 2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
 

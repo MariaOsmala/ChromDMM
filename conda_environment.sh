@@ -1,7 +1,12 @@
 These packages are required to install ChromDMM, ChromDMM installs the required packages itself
- - r-base
-  - r-essentials
-  - r-devtools
+- r-base
+- r-essentials
+- r-devtools
+
+These are required in a linux environemnt, gcc version is crucial
+  - gcc=11.2
+  - gxx
+  - gfortran
 
 
 conda env create -f conda_environment.yml
@@ -11,77 +16,43 @@ conda config --env --add channels conda-forge
 
 conda env update --file conda_environment.yml
 
-#update conda by running
-Conda update -n base -c defaults conda
-
-#macillä
-Luo kotihakemistoon .zshrc tiedosto ja kirjoita siihen
-export PATH=$HOME/anaconda3/bin:$PATH
-
-#Then run
-vi ~/.zshrc 
-. ~/.zshrc 
-
-conda #it works!
-
-conda info --envs
-conda env list
 
 
-conda env create -f DirichletMultinomial_R4.0.3.yml
+########### In triton ###################
 
-#Overrride
-conda env create --force -f experiments/DMM_experiments_R4.0.3.yml 
+sinteractive --time=04:00:00 --mem-per-cpu=5G --nodes=1 --ntasks=1 --cpus-per-task=15
 
-source activate DirichletMultinomial_R4.0.3
+cd /m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/ChromDMM/
+module load anaconda
+
+
+export OMP_NUM_THREADS=15
+
+#MAMBA WOULD BE FASTER
+#source activate /m/cs/scratch/csb/projects/enhancer_clustering/snakemake/mamba 
+
+#mamba env create --prefix ./ChromDMM_mamba --force -f conda_environment.yml
+#mamba config --set env_prompt '({name})'
+#source activate ./preprint_mamba
+#conda config --env --add channels defaults
+#conda config --env --add channels bioconda
+#conda config --env --add channels conda-forge
+
+
+conda env create --prefix ./ChromDMM --force -f conda_environment.yml
+conda config --set env_prompt '({name})'
+source activate ./ChromDMM
+
+Rscript -e 'install.packages("/scratch/cs/csb/projects/enhancer_clustering/Rpackages/ChromDMM_1.0.tar.gz", repos = NULL, type = .Platform$pkgType, lib="/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/ChromDMM/ChromDMM/lib/R/library")'
 
 conda config --env --add channels defaults
 conda config --env --add channels bioconda
 conda config --env --add channels conda-forge
 
-#Tämän jälkeen
-gsl-config --cflags #-I/Users/mpirttin/anaconda3/envs/DirichletMultinomial/include
-gsl-config --libs #-L/Users/mpirttin/anaconda3/envs/DirichletMultinomial/lib -lgsl -lgslcblas
+R
+Rcpp::compileAttributes()
+devtools::install()
 
-export CFLAGS="-I/Users/mpirttin/anaconda3/envs/DirichletMultinomial_R4.0.3/include"
-export LDFLAGS="-L/Users/mpirttin/anaconda3/envs/DirichletMultinomial_R4.0.3/lib -lgsl -lgslcblas"
-
-export RSTUDIO_WHICH_R=/Users/mpirttin/anaconda3/envs/DirichletMultinomial_R4.0.3/bin/R
-
-	open -na Rstudio
-
-
-
-
-#In RStudio
-.libPaths("/Users/mpirttin/anaconda3/envs/DirichletMultinomial_R4.0.3/lib/R/library")
-
-#Update package
-
-The --prune option causes conda to remove any dependencies that are no longer required from the environment.
-
-conda env update DirichletMultinomial_R4.0.3 --file DirichletMultinomial_R4.0.3.yml  --prune
-
-
-make an exact copy of an environment by creating a clone of it:
-conda create --name myclone --clone myenv
-
-conda list --explicit
-
-To use the spec file to create an identical environment on the same machine or another machine:
-
-conda create --name myenv --file spec-file.txt
-To use the spec file to install its listed packages into an existing environment:
-
-conda install --name myenv --file spec-file.txt 
-
-Export your active environment to a new file:
-
-conda env export --from-history > environment.yml
-
-Create the environment from the environment.yml file:
-
-conda env create -f environment.yml
 
 
 
