@@ -9,7 +9,7 @@ Description: This package implements a Dirichlet-Multinomial mixture model to ch
     Machine Learning for Microbiome Data by Martin Morgan. DirichletMultinomial is  an interface to code originally 
     made available by Holmes,Harris, and Quince, 2012, PLoS ONE 7(2): 1-15, ?ChromDMM.
 License: LGPL-3
-Imports: Rcpp (>= 1.0.6), stats4, methods, Matrix, ggplot2, grid, reshape2, GGally, plyr, mgcv, e1071, parallel, S4Vectors, IRanges
+Imports: Rcpp, stats4, methods, Matrix, ggplot2, grid, reshape2, GGally, plyr, mgcv, e1071, parallel, S4Vectors, IRanges
 Suggests: lattice, MASS, RColorBrewer, xtable, testthat
 Collate:
   AllGenerics.R

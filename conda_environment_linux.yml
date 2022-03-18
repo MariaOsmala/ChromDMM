@@ -1,15 +1,16 @@
-name: r_august2020
+name: ChromDMM
 channels:
   - conda-forge
   - bioconda
   - defaults
 dependencies:
+  - r-base
   - r-essentials
-  - r-rcppgsl
   - r-devtools
-  - bioconductor-genomeinfodb
+  - gcc=11.2
+  - gxx
+  - gfortran
+  - r-optparse
   - bioconductor-genomicranges
-  - r-e1071
-prefix: /Users/mpirttin/anaconda3/envs/r_august2020
 
 
