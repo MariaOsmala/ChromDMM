@@ -58,17 +58,18 @@ Rscript scripts/plot_data.R  --data $data --bin.size $bin_size --name "shifted-f
 
 ```
 
+![](figures/shifted-flipped-data-average-2-clusters.png){ width=40% }
 
-<html>
-  <head>
-    <title>Title of the document</title>
-  </head>
-  <body>
-    <h1></h1>
-    <iframe src="figures/shifted-flipped-data-average-2-clusters.pdf#toolbar=0" width="60%" height="500px">
-    </iframe>
-  </body>
-</html>
+Visualisation if the clustering is not known
+
+```
+bin_size=40
+data="experiment_data/data.RDS"
+
+Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --name "shifted-flipped-data" 
+
+```
+![](figures/shifted-flipped-data.png){ width=40% }
 
 The analysis is run as follows. The analysis can be run in parallel with 15 cpus, as the cluster number is varied from 1 to 3, and for each cluster number 5 repetitions are performed, each with random initialisation point. The best model fit of the
 repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The analysis takes x hours/mins with 12 cpus, memory X/cpu.
@@ -76,8 +77,36 @@ repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The a
 bin_size=1
 data="experiment_data/data.RDS"
 
-Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/simulated_data_fit.RDS" 
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 10 --parallel TRUE --output "experiment_data/simulated_data_fit.RDS" 
 ```
+
+AIC and BIC values for varying number of clusters. 
+
+```
+fit="experiment_data/simulated_data_fit_mac.RDS"
+name="simulated_data"
+
+Rscript scripts/AICBIC.R  --fit $fit --name $name 
+
+```
+
+<p float="left">
+  <img src="figures/AIC-simulated_data.png" width="300" />
+  <img src="figures/BIC-simulated_data.png" width="300" /> 
+  </p>
+
+Choose 2 for the number of clusters. Plot the negative log posterior as the function of EM iterations to check the convergence
+
+```
+fit="experiment_data/simulated_data_fit_mac.RDS"
+name="simulated_data"
+Rscript scripts/simulated_figures.R  --fit $fit --cluster 2 --skip 1 --name $name 
+
+```
+![](figures/NLL-simulated_data.png){ width=40% }
+
+`simulated_figures.R` also plots EM convergence diagnostics, see `figures/EM-diagnostics-simulated_data.png`
+
 
 ### Enhancer ENCODE data clustering
 
@@ -90,6 +119,18 @@ is a list of 3 elements:
 
 The analysis is run as follows. The analysis can be run in parallel with 24 cpus, as the cluster number is varied from 3 to 8, and for each cluster number 5 repetitions are performed, each with random initialisation point. The best model fit of the
 repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The analysis takes x hours/mins with 24 cpus, memory X/cpu.
+
+Visualisation of the data
+
+```
+bin_size=40
+data="experiment_data/1000_enhancers_4modifications.RDS"
+
+Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --bin.data TRUE --name "enhancers_4mods" --fig.width 1000 --fig.height 1000
+
+```
+![](figures/enhancers_4mods.png){ width=40% }
+
 
 ```
 data="experiment_data/1000_enhancers_4modifications.Rds"
@@ -110,6 +151,19 @@ RNAPOL2, DNase-seq and MNase-seq. This data is given to the ChromDMM
 The analysis is run as follows. The analysis can be run in parallel with 24 cpus, as the cluster number is varied from 3 to 8, and for each cluster number 5 repetitions are performed, each with random initialisation point. The best model fit of the
 repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The analysis takes x hours/mins with 24 cpus, memory X/cpu.
 
+Visualisation of the data
+
+```
+bin_size=40
+data="experiment_data/1000_enhancers_10modifications.RDS"
+
+Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --bin.data TRUE --name "enhancers_10mods" --fig.width 2000 --fig.height 1000
+
+```
+![](figures/enhancers_10mods.png){ width=100% }
+
+
+
 ```
 data="experiment_data/1000_enhancers_4modifications.Rds"
 bin_size=40
@@ -118,7 +172,7 @@ window=2000
 Rscript scripts/run_ChromDMM.R  --data $data --cluster 2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
 ```
 
-## Citation:
+## Citation
 
 Osmala, M., Eraslan, G. & Lähdesmäki, H. (2022). ChromDMM: A Dirichlet-Multinomial Mixture Model For Clustering Heterogeneous Epigenetic Data (submitted.)
 
@@ -135,12 +189,11 @@ Department of Computer Science
 Email: firstname.surname@aalto.fi  
 Home Page: https://people.aalto.fi/maria.osmala
 
-Gökcen Eraslan
+Gökcen Eraslan, PhD
 Postdoctoral Researcher
 Broad Institute of MIT and Harvard
 Email: gokcen.eraslan@gmail.com
-Home Page: linkedin.com/in/gokcen
-
+Home Page: http://linkedin.com/in/gokcen
 
 Harri Lähdesmäki, D. Sc. (Tech)  
 Associate Professor  

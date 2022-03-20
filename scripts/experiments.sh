@@ -26,7 +26,7 @@ data="experiment_data/data.RDS"
 bin_size=1
 window=50
 
-Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 4 --parallel TRUE --output "data_experiments/simulated_data_fit.RDS"
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 1 --parallel TRUE --output "experiment_data/simulated_data_fit_mac.RDS"
 
 
 #true enhancer data
