@@ -9,8 +9,6 @@ option_list = list(
               help="The number of clusters. Multiple cluster numbers can be given, separated by comma, e.g. 1,2,3"),
   make_option(c("--bin.size", "-B"), action="store", default=1, type='numeric',
               help="Bin size if the data resolution needs to be decreased. No change in bin size in default."),
-  make_option(c("--window", "-W"), action="store", default=1, type='numeric',
-              help="Window size if adjusting needed. No change if the window size matches with the data window size."),
   make_option(c("--verbose"), action="store_true", default=TRUE,
               help="Print the progress of the EM algorithm. Set to FALSE, if --parallel==TRUE"),
   make_option(c("--shift", action="store", default=1, type="numeric"),
@@ -62,11 +60,24 @@ opt = parse_args(OptionParser(option_list=option_list))
 
 opt$shift=as.numeric(opt$shift)
 
+if(opt$output == "")
+{ stop("Error! Output file not specified (--output)!") }
+
+if(opt$data == "")
+{ stop("Error! Data file not specified (--data)!") }
+
+if(opt$shift%%2 == 0)
+{ stop("Error! Number of shift states needs to be an odd number (--shift)!") }
+
+if(opt$parallel == TRUE && opt$verbose==TRUE)
+{ print("Note! if parallel=TRUE, verbose is set to FALSE") 
+  opt$verbose==FALSE
+  }
+
 # print(paste0("data: ", str(opt$data)))
 # opt$cluster=as.numeric(unlist(strsplit(opt$cluster, ",")))
 # print(paste0("cluster: ", str(opt$cluster)))
 # print(paste0("bin.size: ",str(opt$bin.size)))
-# print(paste0("window: ", str(opt$window)))
 # print(paste0("verbose: ",str(opt$verbose)))
 # print(paste0("shift: ", str(opt$shift)))
 # print(paste0("flip: ", str(opt$flip)))
@@ -114,7 +125,7 @@ print(paste0("repetition: ",opt$repetition))
 print(paste0("parallel: ",opt$parallel))
 print(paste0("output: ", opt$output))
 
-
+# 
 
 
 
@@ -147,7 +158,7 @@ print(paste0("output: ", opt$output))
 
 
 
-print("set seed")
+
 seed=FALSE
 if(opt$seed.boolean==TRUE){
   seed=opt$seed
@@ -157,7 +168,7 @@ if(opt$seed.boolean==TRUE){
 #Artificial data
 zeta=NULL
 flip=FALSE
-print("flip")
+
 if(opt$flip==TRUE){
   zeta=t(as.matrix(c(0.5,0.5)))
   flip=TRUE
@@ -165,11 +176,9 @@ if(opt$flip==TRUE){
 
 xi=NULL
 shift.reads=FALSE
-print("shift")
-print(str(opt$shift))
+
 if(opt$shift>1){ #check also that opt$shift is an odd number
   shift.reads=TRUE
-  print("shift2")
   pyramid <- function(S){
     xi=rep(0,S)
     xi[floor(S/2)+1]=floor(S/2)+1
@@ -179,16 +188,25 @@ if(opt$shift>1){ #check also that opt$shift is an odd number
     }
     xi=xi/sum(xi)
   }
-  print("shift3")
+  
   xi=pyramid(opt$shift)
-  print("shift4")
+  
   xi=t(as.matrix(xi))
   
 }
 
-print("read data")
+
 data<- readRDS( opt$data) 
-print("fit model")
+
+#Remove samples which are zero for some modification? almost everything get's removed?
+zero.indices <- which(apply(sapply(data$data, rowSums), 
+                            1, prod) == 0)
+
+if (length(zero.indices) > 0) {
+  warning(sprintf('Excluding are all-zero row(s) in the data: %s\n',
+                  paste(names(zero.indices), collapse = ',')))
+}
+
 fit <- dmn(count=data$data,
     K=opt$cluster,
     bin.width=opt$bin.size,
@@ -229,302 +247,7 @@ fit <- dmn(count=data$data,
 
 saveRDS(fit, opt$output)
 
-stop()
 
-#TRUE data
-################## Enhancers 10 modifications ##########################
-
-
-#41) ARGS="1000_enhancers_bin_1_window_2000_only5prime.RData 
-# 40 
-# dmn-result-1000-enhancers-withShift-withFlip_40_10mods_withoutRep_1.Rds
-# enhancers
-# 10 
-# H2AZ 
-# H3K27ac 
-# H3K4me1 
-# H3K4me2 
-# H3K4me3 
-# H3K79me2 
-# H3K9ac 
-# RNAPOL2 DNase-seq MNase-seq 8 1.1 0.1 10 10 TRUE TRUE 1 TRUE FALSE 1000";; #
-
-args = commandArgs(trailingOnly=TRUE)
-signals_name<-as.character(args[1])
-bin_size <-as.numeric(args[2])
-save_name<-as.character(args[3])
-region_type=as.character(args[4])
-mod_number=as.numeric(args[5])
-mod_subset=c()
-j=6
-for(i in 1:mod_number){
-  mod_subset[i]=as.character(args[5+i])
-  j=j+1
-}
-
-Kmax=as.numeric(args[j]) #The max number fo Dirichlet components to fit
-eta=as.numeric(args[j + 1])
-nu=as.numeric(args[j + 2])
-etah=as.numeric(args[j + 3])
-nuh=as.numeric(args[j + 4])
-shift.reads=as.logical(args[j + 5])
-flip=as.logical(args[j + 6])
-repetition=as.numeric(args[j + 7])
-parallel=as.logical(args[j + 8])
-
-directed=as.logical(args[j + 9])
-maxIt=as.numeric(args[j + 10])
-
-N=as.numeric(args[j + 11])
-
-print(signals_name)
-print(bin_size)
-print(save_name)
-print(region_type)
-print(mod_number)
-print(mod_subset)
-print(Kmax)
-print(eta)
-print(nu)
-print(etah)
-print(nuh)
-print(shift.reads)
-print(flip)
-print(repetition)
-print(parallel)
-print(directed)
-print(maxIt)
-
-save_name=gsub(".Rds", paste0("_EMiter_",maxIt,".Rds"), save_name)
-#if signals created by Göcken, signals.CTCF.enhancer.signal or promoter.signal
-
-#load(paste0("/m/cs/scratch/csb/projects/enhancer_prediction/experiments/RProjects/enhancerPrediction2020/Data/K562/",signals_name))
-load(paste0("/m/cs/scratch/csb/projects/enhancer_prediction/experiments/RProjects/preprint_devel/Data/K562/data_R/",signals_name))
-#load(paste0("/Volumes/scratch/cs/csb/projects/enhancer_prediction/experiments/RProjects/preprint_devel/Data/K562/data_R/",signals_name))
-if(region_type=="enhancers"){
-  signals=normalized_profiles  
-}
-if(region_type=="promoters"){
-  if(directed==TRUE){
-    signals=normalized_profiles_directed  
-  }else{
-    signals=normalized_profiles_undirected  
-  }
-  
-}
-
-for(s in names(signals)){
-  signals[[s]]=signals[[s]][,1:N]
-  
-}
-
-
-non_histone_ind=c(grep( 'Dnase',names(signals)),grep( 'Nsome',names(signals)))
-clearer_names<-names(signals)
-clearer_names=unlist(sapply(clearer_names,strsplit, "RawData"))
-clearer_names[non_histone_ind]=c("DNase-seq", "MNase-seq")
-clearer_names[non_histone_ind]=c("DNase-seq","MNase-seq")
-clearer_names=sub("Ctcf","CTCF",clearer_names)
-clearer_names=sub("az","AZ",clearer_names)
-clearer_names=sub("Pol2","RNAPOL2",clearer_names)
-clearer_names=sub("k","K",clearer_names)
-names(clearer_names)=NULL
-names(signals)=clearer_names
-
-
-
-save_path="RData/"
-figure_path="figures/"
-
-print(paste0(save_path, save_name))
-print(getwd())
-library("RcppGSL")
-library("DMMChrom")
-
-# Bin signals ============================================================
-
-signals.binned <- Map( function(mod, modname) {
-  count <- bin_signal(t(as.matrix(mod)), 1)
-  #str(count)
-  rownames(count) <- paste0(modname, '.', seq(nrow(count)))
-  colnames(count) <- paste0('bin', seq(ncol(count)))
-  
-  count[which(count<0)]=0
-  count=round(count)
-  
-  
-  count
-  
-}, signals, names(signals))
-
-
-signals.binned2 <- Map( function(mod, modname) {
-  count <- bin_signal(t(as.matrix(mod)), bin_size)
-  #str(count)
-  rownames(count) <- paste0(modname, '.', seq(nrow(count)))
-  colnames(count) <- paste0('bin', seq(ncol(count)))
-  
-  count[which(count<0)]=0
-  count=round(count)
-  
-  
-  count
-  
-}, signals, names(signals))
-
-
-
-# enhancers.binned <- Map(function(mod, modname) {
-#   count <- bin_signal(t(as.matrix(mod$enhancer.signal)), 40)
-#   rownames(count) <- paste0(modname, '.', seq(nrow(count)))
-#   colnames(count) <- paste0('bin', seq(ncol(count)))
-#   count
-# 
-# }, signals, names(signals))
-
-signals.subset <- signals.binned[mod_subset]
-signals.subset2<-signals.binned2[mod_subset]
-
-
-#Study the distribution
-
-#library("ggplot2")
-#p<-gList()
-#gamma_param=data.frame(shape=rep(0,length(mod_subset)), rate=rep(0,length(mod_subset)),row.names=mod_subset)
-#for(mod in mod_subset){
-#  df<- data.frame(colMean=rowMeans(signals.subset2[[mod]]))
-#  gamma_param[mod,]<-fitdistr(df$colMean, densfun="gamma")$estimate
-#  p[[mod]] <- ggplotGrob(ggplot(df, aes(x=colMean))+geom_histogram(binwidth=1)
-#                        +ggtitle(mod)+xlab("Mean")+ylab("Frequency"))
-#
-#  print(p[[mod]])
-#}
-#library("gridExtra")
-#png("test.png",
-#    width=500,
-#    height=700)
-#marrangeGrob(p, nrow=5, ncol=2)
-#dev.off()
-
-#Fit gamma distribution into these values
-
-
-
-# Parallel ============================================================
-#signals.subset is a list of matrixes of size 1000 x 50
-
-# count=signals.subset
-# K=1:Kmax 
-# bin.width = bin_size
-# shift.ratio = 1/8
-# verbose = FALSE
-# seed = F
-#shift.reads = T
-#flip = F 
-#eta = 0.1
-#nu = 0.1, 
-#etah = 0
-#nuh = 0
-# maxIt = 250
-# EM.threshold = 1e-06
-# soft.kmeans.maxit = 1000
-# soft.kmeans.stiffness = 50
-# randomInit = T
-# maxNumOptIter = 1000
-# numOptRelTol = 1e-12
-#parallel = T
-
-#dmn bins the data signals.subset should be in 1 bp format
-
-#Remove samples which are zero for some modification? almost everything get's removed?
-zero.indices <- which(apply(sapply(signals.subset, rowSums), 
-                            1, prod) == 0)
-
-if (length(zero.indices) > 0) {
-  warning(sprintf('Excluding are all-zero row(s) in the data: %s\n',
-                  paste(names(zero.indices), collapse = ',')))
-}
-
-#save.image("/m/cs/scratch/csb/projects/enhancer_clustering/Rpackages/DMM-private-master-devel-works/startingPoint.RData")
-
-#save in Spar-K compatible format(needs counts, what about normalized?)
-#for(mod in mod_subset){
-#write.table(signals.subset2[[mod]],quote=FALSE, sep=" ", row.names=FALSE, 
-#            col.names=FALSE,
-#            file=paste0("/m/cs/scratch/csb/projects/enhancer_clustering/EnhancerClustering/method_comparison/Spar-K/",mod,".txt"))
-#}
-
-
-zeta=NULL
-S=1
-xi=NULL
-if(flip==TRUE){
-  zeta=t(as.matrix(c(0.5,0.5)))
-}
-if(shift.reads==TRUE){
-  S=21
-  pyramid <- function (S){
-    xi=rep(0,S)
-    xi[floor(S/2)+1]=floor(S/2)+1
-    for(i in floor(S/2):1){
-      xi[i]=i
-      xi[S-i+1]=i
-    }
-    xi=xi/sum(xi)
-  }
-  xi=pyramid(S)
-  xi=t(as.matrix(xi))
-}
-
-
-try.catch=try(rnorm(1))
-class(try.catch)="try-error"
-
-#concatenate and write the data into Spar-K and ChIP-Partitioning compatible format
-create_spark_data=FALSE
-if(create_spark_data==TRUE){
-  spark.data <- do.call(cbind, signals.subset)
-  attr(spark.data, "dimnames")[[2]]= paste0('bin', seq_len(ncol(spark.data)))
-  attr(spark.data, "dimnames")[[1]]= paste0('loci', seq_len(nrow(spark.data)))
-  write.table(spark.data, file=paste0("real_enhancer_data_spark_chippart.txt"), 
-              row.names=FALSE, col.names=FALSE, quote=FALSE)
-  
-}
-
-
-while(class(try.catch)=="try-error"){
-  try.catch <- try( subset.fits <- ChromDMM::dmn(count=signals.subset, K=1:Kmax, 
-                                                 bin.width=bin_size, 
-                                                 verbose = F, eta=eta, nu=nu, etah=etah, nuh=nuh, S=S,
-                                                 shift.reads = shift.reads, flip=flip, zeta=zeta, xi=xi,
-                                                 repetition=repetition, randomInit=T, parallel=parallel,EM.threshold=1e-6, 
-                                                 maxNumOptIter = 1000, numOptRelTol=1e-6, maxIt=maxIt, init="kmeans++" )
-  )
-}
-print(getwd())
-print(paste0(save_path, save_name))
-saveRDS(subset.fits, paste0(save_path, save_name))
-saveRDS(zero.indices, paste0(save_path, gsub(".Rds", "_zeroindices.Rds", save_name)))
-
-
-
-#  opt=list()
-#  data_path="/Users/mpirttin/projects/EnhancerClustering/experiments/MariasExperimentsPackageProperlyInstalled/enhancerdnase-experiments/artificial_data_better/chippartitioning/"
-# # 
-# # # 
-#  n_first=10
-#  n_second=10
-# # # 
-# # #for reference
-# # opt$data=paste0(data_path,"shift-concat-2-2-",n_first,"-",n_second,"-eta-1.1-nu-0.1-etah-1.1-nuh-0.1-not-shifted-bin-40.txt")
-# # 
-#  opt$data=paste0(data_path,"shift-concat-2-2-",n_first,"-",n_second,"-eta-1.1-nu-0.1-etah-1.1-nuh-0.1-shifted-bin-40.txt")
-# #               
-# opt$cluster=2
-# opt$iter=100
-# opt$shift=21
-# opt$seed=1
-# opt$output=paste0("results_artificial_data_better/shift-concat-2-2-",n_first,"-",n_second,"-eta-1.1-nu-0.1-etah-1.1-nuh-0.1/result.Rds")
 
 
 # parses options

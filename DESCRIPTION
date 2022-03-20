@@ -4,7 +4,7 @@ Title: A Dirichlet-Multinomial Mixture Model For Clustering Heterogeneous Epigen
 Version: 1.0
 Author: Maria Osmala <maria.osmala@aalto.fi>, Goekcen Eraslan <geraslan@broadinstitute.org>, Martin Morgan <mtmorgan@fhcrc.org>
 Maintainer: Maria Osmala <maria.osmala@aalto.fi>
-Description: This package implements a Dirichlet-Multinomial mixture model to chlester multiple chromatin features simultaenously.
+Description: This package implements a Dirichlet-Multinomial mixture model to cluster multiple chromatin features simultaenously.
     The package is an extension of bioconductor packages DirichletMultinomial: Dirichlet-Multinomial Mixture Model 
     Machine Learning for Microbiome Data by Martin Morgan. DirichletMultinomial is  an interface to code originally 
     made available by Holmes,Harris, and Quince, 2012, PLoS ONE 7(2): 1-15, ?ChromDMM.
