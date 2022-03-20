@@ -48,14 +48,35 @@ genomic elements (e.g. enhancers) and L is the length of chromatin feature profi
 * true.shift.bases: Vector of length N, true shifts in base pairs, values in range [-400, 400] and multiplication of 40
 * tobe.unshifted.unflipped.data: List of 2 matrices names H3K4me1 and RNAPOL2 of size N=1000 x L=70. This data is used to realign the profiles according to the learned shift states. The coverage counts are originally extracted in genomic windows of size 2800. Resolution B=70 results in profiles of length 70
 
+Visualise the simulated data
+
+```
+bin_size=40
+data="experiment_data/data.RDS"
+
+Rscript scripts/plot_data.R  --data $data --bin.size $bin_size --name "shifted-flipped-data" 
+
+```
+
+
+<html>
+  <head>
+    <title>Title of the document</title>
+  </head>
+  <body>
+    <h1></h1>
+    <iframe src="figures/shifted-flipped-data-average-2-clusters.pdf#toolbar=0" width="60%" height="500px">
+    </iframe>
+  </body>
+</html>
+
 The analysis is run as follows. The analysis can be run in parallel with 15 cpus, as the cluster number is varied from 1 to 3, and for each cluster number 5 repetitions are performed, each with random initialisation point. The best model fit of the
 repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The analysis takes x hours/mins with 12 cpus, memory X/cpu.
 ```
 bin_size=1
-window=50
 data="experiment_data/data.RDS"
 
-Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/simulated_data_fit.RDS" 
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3 --bin.size $bin_size --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/simulated_data_fit.RDS" 
 ```
 
 ### Enhancer ENCODE data clustering
