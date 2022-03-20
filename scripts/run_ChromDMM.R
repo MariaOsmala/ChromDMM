@@ -250,35 +250,3 @@ saveRDS(fit, opt$output)
 
 
 
-# parses options
-opt = parse_args(OptionParser(option_list=option_list))
-opt$shift = as.numeric(opt$shift)
-if(opt$output == "")
-{ stop("Error! Output file not specified (--output)!") }
-
-
-# read data
-data = as.matrix(read.table(opt$data))
-
-print(opt$seeding)
-# sets the random number generator
-set.seed(opt$seed)
-
-if(opt$flip)
-{ results = em.shape.shift.flip(data, k=opt$cluster, iter=opt$iter, shift=opt$shift, seeding=opt$seeding)
-} else { 
-  results = em.shape.shift(data, k=opt$cluster, iter=opt$iter, shift=opt$shift, seeding=opt$seeding)
-}
-
-# write results
-f = write.object(opt$output, results)
-
-# exit code
-# in case of failure, last element of the list is supposed to be NULL
-l = length(results)
-if(is.null(results[[l]]))
-{ quit(status=1)
-} else { 
-  quit(status=0)
-}
-
