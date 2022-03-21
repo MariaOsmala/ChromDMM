@@ -102,8 +102,6 @@ if(opt$parallel == TRUE && opt$verbose==TRUE)
 print(paste0("data: ", opt$data))
 opt$cluster=as.integer(unlist(strsplit(opt$cluster, ",")))
 print(paste0("cluster: ", opt$cluster))
-print(str(opt$cluster))
-print(str(1:3))
 print(paste0("bin.size: ",opt$bin.size))
 print(paste0("window: ", opt$window))
 print(paste0("verbose: ",opt$verbose))
@@ -209,7 +207,11 @@ if (length(zero.indices) > 0) {
                   paste(names(zero.indices), collapse = ',')))
 }
 
-fit <- dmn(count=data$data,
+try.catch=try(rnorm(1))
+class(try.catch)="try-error"
+while(class(try.catch)=="try-error"){
+
+  try.catch <- try( time <- system.time( fit <- dmn(count=data$data,
     K=opt$cluster,
     bin.width=opt$bin.size,
     S=opt$shift,
@@ -231,8 +233,10 @@ fit <- dmn(count=data$data,
     repetition=opt$repetition,
     maxNumOptIter=opt$BFGS.max.iter,
     numOptRelTol=opt$BFGS.num.tol,
-    parallel=opt$parallel, init=opt$initialisation, hessian=FALSE)
+    parallel=opt$parallel, init=opt$initialisation, hessian=FALSE)), ,silent=TRUE)
+}
 
+print(time)
 # maxNumOptIter=opt$BFGS.max.iter
 # numOptRelTol=opt$BFGS.num.tol
 # maxIt=opt$EM.max.iter
@@ -246,6 +250,7 @@ fit <- dmn(count=data$data,
 
 
 
+save(fit, time, zero.indices, file=paste0( strsplit(opt$output, split=".", fixed=TRUE)[[1]][1],  "-fit-time-zeroindex.RData"))
 
 saveRDS(fit, opt$output)
 
