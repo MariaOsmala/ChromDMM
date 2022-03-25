@@ -198,7 +198,7 @@ The analysis is run as follows. The cluster number is varied from 2 to 8, and fo
 data="experiment_data/1000_enhancers_4modifications.Rds"
 bin_size=40
 
-Rscript scripts/run_ChromDMM.R  --data $data --cluster 2,3,4,5,6,7,8 --bin.size $bin_size --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 10 --parallel TRUE --output "experiment_data/4mods_fit.RDS"
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3,4,5,6,7,8 --bin.size $bin_size --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 10 --parallel TRUE --output "experiment_data/4mods_fit.RDS"
 ```
 
 AIC and BIC values for varying number of clusters. 
@@ -279,7 +279,7 @@ data="experiment_data/1000_enhancers_4modifications.Rds"
 bin_size=40
 window=2000
 
-Rscript scripts/run_ChromDMM.R  --data $data --cluster 2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
 ```
 
 ## Citation
