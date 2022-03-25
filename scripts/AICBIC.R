@@ -28,10 +28,10 @@ print(length(fit))
 
 figure_path="figures/"
 
-png(paste0(figure_path, 'BIC-',opt$name,'.png'), 1200, 1200, res = 150)
+png(paste0(figure_path, 'BIC-',opt$name,'.png'), 800, 800, res = 150)
 plot(sapply(fit, BIC), type='b', xlab='Number of clusters', ylab='BIC')
 dev.off()
 
-png(paste0(figure_path, 'AIC-',opt$name,'.png'), 1200, 1200, res = 150)
+png(paste0(figure_path, 'AIC-',opt$name,'.png'), 800, 800, res = 150)
 plot(sapply(fit, AIC), type='b', xlab='Number of clusters', ylab='AIC')
 dev.off()

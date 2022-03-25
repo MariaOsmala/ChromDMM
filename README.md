@@ -61,8 +61,9 @@ data="experiment_data/simulated_data.RDS"
 Rscript scripts/plot_data.R  --data $data --cluster 2 --bin.size $bin_size --name "shifted-flipped-data" 
 
 ```
-
+<center>
 <img src="figures/shifted-flipped-data-average-2-clusters.png"  width="40%" >
+</center>
 
 Visualisation if the clustering is not known
 
@@ -73,8 +74,9 @@ data="experiment_data/simulated_data.RDS"
 Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --name "shifted-flipped-data" 
 
 ```
-
+<center>
 <img src="figures/shifted-flipped-data.png"  width="40%" >
+</center>
 
 The analysis is run as follows. The cluster number is varied from 1 to 3, and for each cluster number 10 repetitions are performed, each with random initialisation point. The computations can be parallelised across the multiple repetitions as well as across the varying number of clusters. The best model fit of the repetitions is retained for each cluster number. If parallel=TRUE, verbose should be set of FALSE. The analysis took ~6mins with 12 cpus and the total memory requirement was ~10G.
 ```
@@ -94,9 +96,21 @@ Rscript scripts/AICBIC.R  --fit $fit --name $name
 
 ```
 
-AIC            |  BIC
-:-------------------------:|:-------------------------:
-![](figures/AIC-simulated_data.png)  |  ![](figures/BIC-simulated_data.png)
+<center>
+<table width=80%>
+  <tr>
+    <td style="text-align:center">AIC</td>
+     <td style="text-align:center">BIC</td>
+     
+  </tr>
+  <tr>
+    <td><img src="figures/AIC-simulated_data.png" ></td>
+    <td><img src="figures/BIC-simulated_data.png" ></td>
+    
+  </tr>
+ </table>
+</center>
+
 
 
 Choose 2 for the number of clusters. Plot the negative log posterior as the function of EM iterations to check the convergence
@@ -104,13 +118,13 @@ Choose 2 for the number of clusters. Plot the negative log posterior as the func
 ```
 fit="experiment_data/simulated_data_fit.RDS"
 name="simulated_data"
-Rscript scripts/simulated_figures.R  --fit $fit --cluster 2 --skip 1 --name $name 
+Rscript scripts/simulated_figures.R  --fit $fit --cluster 2 --skip 4 --name $name 
 
 ```
+<center>
+<img src="figures/NLL-simulated_data.png"  width="50%" >
+</center>
 
-<img src="figures/NLL-simulated_data.png.png"  width="40%" >
-
-figures/simulated_data-DirichletParameters-2-clusters
 
 
 `simulated_figures.R` also plots EM convergence diagnostics, see `figures/EM-diagnostics-simulated_data.png`
@@ -125,9 +139,26 @@ bin_size=40
 Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --cluster 2 --name $name 
 
 ```
-Average aggregate patterns            |  Smoothed Dirichlet parameters
-:-------------------------:|:-------------------------:
-![](figures/simulated_data-average-2-clusters.png)  |  ![](figures/simulated_data-DirichletParameters-2-clusters.png)
+
+<center>
+<table width=80%>
+  <tr>
+    <td style="text-align:center">Average aggregate patterns</td>
+     <td style="text-align:center">Smoothed Dirichlet parameters</td>
+     
+  </tr>
+  <tr height = 20px>
+    <td></td>
+    <td></td>
+    
+  </tr>
+  <tr>
+    <td><img src="figures/simulated_data-average-2-clusters.png" ></td>
+    <td><img src="figures/simulated_data-DirichletParameters-2-clusters.png" ></td>
+    
+  </tr>
+ </table>
+</center>
 
 
 
@@ -154,7 +185,9 @@ data="experiment_data/1000_enhancers_4modifications.RDS"
 Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --bin.data TRUE --name "enhancers_4mods" --fig.width 1000 --fig.height 1000
 
 ```
-![](figures/enhancers_4mods.png){ width=40% }
+<center>
+![](figures/enhancers_4mods.png){ width=60% }
+</center>
 
 The analysis is run as follows. The cluster number is varied from 2 to 8, and for each cluster number 10 repetitions are performed, each with random initialisation point. The analysis took ~24h with 24 cpus and the total memory requirement was ~25G.
 
@@ -220,6 +253,10 @@ The analysis is run as follows. The analysis can be run in parallel with 24 cpus
 repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The analysis takes x hours/mins with 24 cpus, memory X/cpu.
 
 Visualisation of the data
+
+<center>
+![](figures/enhancers_10mods.png){ }
+</center>
 
 ```
 bin_size=40
