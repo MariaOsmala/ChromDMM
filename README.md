@@ -288,7 +288,7 @@ Osmala, M., Eraslan, G. & Lähdesmäki, H. (2022). ChromDMM: A Dirichlet-Multino
 
 ## License
 
-This project is licensed under the LGPL-3 License - see the [LICENSE.md](LICENSE.md) file for details
+This project is licensed under the LGPL-3 License - see the [LICENSE](LICENSE) file for details
 
 ## Contact
 
