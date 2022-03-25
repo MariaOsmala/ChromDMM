@@ -302,7 +302,7 @@ Home Page: https://people.aalto.fi/maria.osmala
 Gökcen Eraslan, PhD
 Postdoctoral Researcher
 Broad Institute of MIT and Harvard
-Email: gokcen.eraslan@gmail.com
+Email: geraslan@broadinstitute.org
 Home Page: http://linkedin.com/in/gokcen
 
 Harri Lähdesmäki, D. Sc. (Tech)  
