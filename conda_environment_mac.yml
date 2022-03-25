@@ -9,5 +9,8 @@ dependencies:
   - r-devtools
   - r-optparse
   - bioconductor-genomicranges
+  - r-egg
+  - r-gridextra
+  - r-cowplot
 
 

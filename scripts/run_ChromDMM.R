@@ -198,7 +198,7 @@ if(opt$shift>1){ #check also that opt$shift is an odd number
 
 data<- readRDS( opt$data) 
 
-#Remove samples which are zero for some modification? almost everything get's removed?
+#Remove samples which are zero for some modification? 
 zero.indices <- which(apply(sapply(data$data, rowSums), 
                             1, prod) == 0)
 
