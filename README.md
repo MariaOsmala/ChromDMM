@@ -62,7 +62,7 @@ Rscript scripts/plot_data.R  --data $data --cluster 2 --bin.size $bin_size --nam
 
 ```
 
-![](figures/shifted-flipped-data-average-2-clusters.png =40% )
+![](figures/shifted-flipped-data-average-2-clusters.png =40%)
 
 Visualisation if the clustering is not known
 
