@@ -186,8 +186,10 @@ Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size 
 
 ```
 <center>
-![](figures/enhancers_4mods.png){ width=60% }
+
+<img src="figures/enhancers_4mods.png"  width="60%" >
 </center>
+
 
 The analysis is run as follows. The cluster number is varied from 2 to 8, and for each cluster number 10 repetitions are performed, each with random initialisation point. The analysis took ~24h with 24 cpus and the total memory requirement was ~25G.
 
@@ -254,9 +256,12 @@ repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The a
 
 Visualisation of the data
 
+
+
 <center>
-![](figures/enhancers_10mods.png){ }
+<img src="figures/enhancers_10mods.png" >
 </center>
+
 
 ```
 bin_size=40
