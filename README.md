@@ -62,7 +62,7 @@ Rscript scripts/plot_data.R  --data $data --cluster 2 --bin.size $bin_size --nam
 
 ```
 
-![](figures/shifted-flipped-data-average-2-clusters.png =40%)
+<img src="figures/shifted-flipped-data-average-2-clusters.png"  width="40%" >
 
 Visualisation if the clustering is not known
 
@@ -73,7 +73,8 @@ data="experiment_data/simulated_data.RDS"
 Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --name "shifted-flipped-data" 
 
 ```
-![](figures/shifted-flipped-data.png){ width=40% }
+
+<img src="figures/shifted-flipped-data.png"  width="40%" >
 
 The analysis is run as follows. The cluster number is varied from 1 to 3, and for each cluster number 10 repetitions are performed, each with random initialisation point. The computations can be parallelised across the multiple repetitions as well as across the varying number of clusters. The best model fit of the repetitions is retained for each cluster number. If parallel=TRUE, verbose should be set of FALSE. The analysis took ~6mins with 12 cpus and the total memory requirement was ~10G.
 ```
@@ -106,7 +107,11 @@ name="simulated_data"
 Rscript scripts/simulated_figures.R  --fit $fit --cluster 2 --skip 1 --name $name 
 
 ```
-![](figures/NLL-simulated_data.png){ width=40% }
+
+<img src="figures/NLL-simulated_data.png.png"  width="40%" >
+
+figures/simulated_data-DirichletParameters-2-clusters
+
 
 `simulated_figures.R` also plots EM convergence diagnostics, see `figures/EM-diagnostics-simulated_data.png`
 
