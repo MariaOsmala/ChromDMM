@@ -10,10 +10,13 @@ option_list = list(
               help="Number of clusters"),
   make_option(c("-f", "--fit"), action="store", default=NULL, type='character',
               help="The file containing the ChromDMM fit."),
+  make_option(c("--fig.width"), action="store", default=1100, type='numeric',
+              help="png figure width"),
+  make_option(c("--fig.height"), action="store", default=1400, type='numeric',
+              help="png figure height"),
   make_option(c("--name"), action="store", default="", type='character',
               help="The figure file name")
 )
-
 
 
 
@@ -34,6 +37,7 @@ source("scripts/plot.heatmap.final.R")
 
 data<- readRDS( opt$data) 
 window=ncol(data$data[[1]])*opt$bin.size
+print(paste0("window: ", window))
 
 fits=NULL
 if( !is.null(opt$fit)){
@@ -55,6 +59,8 @@ if( !is.null(opt$fit)){
   #maximum number of shifts
   S=dim(fits[[opt$cluster]]@Ez)[2]
   window2=ncol(data$tobe.unshifted.unflipped.binned.data[[1]])-S+1
+  print(paste0("window2: ", window2))
+  window=window2*opt$bin.size
   N=nrow(data$data[[1]])
   binned.data <- data$tobe.unshifted.unflipped.binned.data
   unshifted.binned.data=data$tobe.unshifted.unflipped.binned.data #to have unshifted.binned.data in correct list structure
@@ -85,8 +91,8 @@ if( !is.null(opt$fit)){
                                       title.margin=0.1,
                                       param.height=0.4,
                                       data.height=1.3,
-                                      figure_width=1100,
-                                      figure_height=1400,
+                                      figure_width=opt$fig.width,
+                                      figure_height=opt$fig.height,
                                       figure_res=160,
                                       legend_down=0.25,
                                       legend_downshift=0.05,
@@ -105,8 +111,8 @@ if( !is.null(opt$fit)){
                                       param.height=0.4,
                                       data.height=1.3,
                                       param="average",
-                                      figure_width=1100,
-                                      figure_height=1400,
+                                      figure_width=opt$fig.width,
+                                      figure_height=opt$fig.height,
                                       figure_res=160,
                                       legend_down=0.25,
                                       legend_downshift=0.05,
@@ -129,8 +135,8 @@ plot.heatmap.final(fits=fits,
                    param.height=0.4,
                    data.height=1.3,
                    param="average", 
-                   figure_width=1100,
-                   figure_height=1400,
+                   figure_width=opt$fig.width,
+                   figure_height=opt$fig.height,
                    figure_res=160,
                    legend_down=0.25,
                    legend_downshift=0.05,

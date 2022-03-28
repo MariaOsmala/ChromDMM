@@ -9,6 +9,10 @@ option_list = list(
               help="How many iterations to skip from the beginning"),
   make_option(c("-c", "--cluster"), action="store", default=NULL, type='character',
               help="The number of clusters."),
+  make_option(c("--fig.width"), action="store", default=2000, type='numeric',
+              help="png figure width"),
+  make_option(c("--fig.height"), action="store", default=4000, type='numeric',
+              help="png figure height"),
   make_option(c("--name"), action="store", default="", type='character',
               help="The figure file name")
 )
@@ -31,7 +35,7 @@ figure_path="figures/"
 
 fit=readRDS(opt$fit)
 
-png(paste0(figure_path,"EM.diagnostics-",opt$name,".png"), 2000, 4000, res = 150)
+png(paste0(figure_path,"EM.diagnostics-",opt$name,".png"), width=opt$fig.width,height=opt$fig.height, res = 150)
 ChromDMM::plot.EM(fit=fit[[opt$cluster]], smoothness.scale='free', skip=0, plot.det=FALSE)
 dev.off()
 

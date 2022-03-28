@@ -52,7 +52,7 @@ genomic elements (e.g. enhancers) and L is the length of chromatin feature profi
 * true.shift.bases: Vector of length N, true shifts in base pairs, values in range [-400, 400] and multiplication of 40
 * tobe.unshifted.unflipped.binned.data: List of 2 matrices names H3K4me1 and RNAPOL2 of size N=1000 x L=70. This data is used to realign the profiles according to the learned shift states. The coverage counts are originally extracted in genomic windows of size 2800. Resolution B=70 results in profiles of length 70
 
-Visualise the simulated data (DEBUG THIS!)
+Visualise the simulated data
 
 ```
 bin_size=40
@@ -78,7 +78,7 @@ Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size 
 <img src="figures/shifted-flipped-data.png"  width="40%" >
 </center>
 
-The analysis is run as follows. The cluster number is varied from 1 to 3, and for each cluster number 10 repetitions are performed, each with random initialisation point. The computations can be parallelised across the multiple repetitions as well as across the varying number of clusters. The best model fit of the repetitions is retained for each cluster number. If parallel=TRUE, verbose should be set of FALSE. The analysis took ~6mins with 12 cpus and the total memory requirement was ~10G.
+The analysis is run as follows. The cluster number is varied from 1 to 3, and for each cluster number 10 repetitions are performed, each with random initialisation point. The computations can be parallelised across the multiple repetitions as well as across the varying number of clusters. The best model fit of the repetitions is retained for each cluster number. If parallel=TRUE, verbose should be set of FALSE. The analysis took ~6h with 24 cpus and the total memory requirement was ~10G.
 ```
 bin_size=1
 data="experiment_data/simulated_data.RDS"
@@ -164,7 +164,10 @@ Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --clus
 
 ### Enhancer ENCODE data clustering
 
+
 The chromatin features extracted at enhancers were obtained using the [PREPRINT](https://github.com/MariaOsmala/preprint) pre-processing steps with configuration `five_prime_end: TRUE` set in the `workflow/config.yaml`. An example output of PREPRINT pre-processing is given in file `experiment_data/1000_enhancers_bin_1_window_4000_only5prime.RData`. When extracting the chromatin feature coverage values at enhancers, only the 5' ends of the aligned reads were considered. See `scripts/process_true_enhancer_data.R` how to process to PREPRINT output to a ChromDMM compatible format (`experiment_data/1000_enhancers_4modifications.Rds`).
+
+#### 4 chromatin features
 
 The ChromDMM compatible object in file `experiment_data/1000_enhancers_4modifications.Rds`
 is a list of 3 elements:
@@ -191,7 +194,7 @@ Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size 
 </center>
 
 
-The analysis is run as follows. The cluster number is varied from 2 to 8, and for each cluster number 10 repetitions are performed, each with random initialisation point. The analysis took ~24h with 24 cpus and the total memory requirement was ~25G.
+The analysis is run as follows. The cluster number is varied from 1 to 8, and for each cluster number 10 repetitions are performed, each with random initialisation point. The analysis took ~1d 6h with 24 cpus and the total memory requirement was ~25G.
 
 
 ```
@@ -211,19 +214,33 @@ Rscript scripts/AICBIC.R  --fit $fit --name $name
 
 ```
 
-AIC            |  BIC
-:-------------------------:|:-------------------------:
-**TODO**  |  **TODO**
+<center>
+<table width=80%>
+  <tr>
+    <td style="text-align:center">AIC</td>
+     <td style="text-align:center">BIC</td>
+     
+  </tr>
+  <tr>
+    <td><img src="figures/AIC-enhancers-4mods.png" ></td>
+    <td><img src="figures/BIC-enhancers-4mods.png" ></td>
+    
+  </tr>
+ </table>
+</center>
 
 AIC and BIC likely underestimate the number of clusters, large number of samples are required. Let us choose 6 for the number of clusters. Plot the negative log posterior as the function of EM iterations to check the convergence
 
 ```
 fit="experiment_data/4mods_fit.RDS"
 name="enhancers-4mods"
-Rscript scripts/simulated_figures.R  --fit $fit --cluster 6 --skip 1 --name $name 
+Rscript scripts/simulated_figures.R  --fit $fit --cluster 6 --skip 5 --name $name 
 
 ```
-**TODO**
+
+<center>
+<img src="figures/NLL-enhancers-4mods.png"  width="50%" >
+</center>
 
 `simulated_figures.R` also plots EM convergence diagnostics, see `figures/EM-diagnostics-enhancers-4mods.png`
 
@@ -234,34 +251,42 @@ data="experiment_data/1000_enhancers_4modifications.Rds"
 fit="experiment_data/4mods_fit.RDS"
 name="enhancers-4mods"
 bin_size=40
-Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --cluster 6 --name $name 
+Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --cluster 6 --name $name --fig.width 1500 --fig.height 4200
 
 ```
-Average aggregate patterns            |  Smoothed Dirichlet parameters
-:-------------------------:|:-------------------------:
-**TODO**  |  **TODO**
+<center>
+<table width=100% cellspacing=”10″ >
+  <tr>
+    <td style="text-align:center">Average aggregate patterns</td>
+     <td style="text-align:center">Smoothed Dirichlet parameters</td>
+     
+  </tr>
+  <tr height = 20px>
+    <td></td>
+    <td></td>
+    
+  </tr>
+  <tr>
+    <td style="text-align:center"><img src="figures/enhancers-4mods-average-6-clusters.png" width="95%"></td>
+    <td style="text-align:center"><img src="figures/enhancers-4mods-DirichletParameters-6-clusters.png" width="95%" ></td>
+    
+  </tr>
+ </table>
+</center>
 
 
+#### 10 chromatin features
 
-The object in file file `experiment_data/1000_enhancers_10modifications.Rds`
-is a list of 3 elements:
+The ChromDMM compabible object in file `experiment_data/1000_enhancers_10modifications.Rds` is a list of 3 elements:
 
-* data is a list of 10. Each list element contains N x W chromatin feature data matrices. N is the number of elements and W is the genomic window. The chromatin features are H2AZ, H3K27ac, H3K4me1, H3K4me2, H3K4me3, H3K79me2, H3K9ac, 
+* data is a list of 10. Each list element contains N x W chromatin feature data matrices. N is the number of elements and W is the size of genomic window (2000 bp). The chromatin features are H2AZ, H3K27ac, H3K4me1, H3K4me2, H3K4me3, H3K79me2, H3K9ac, 
 RNAPOL2, DNase-seq and MNase-seq. This data is given to the ChromDMM
 * binned.data: same as data, but created with resolution B=40
 * tobe.unshifted.unflipped.binned.data: List of 10 matrixes of size N x W. Data extracted originally in window W=2800 and binned with B=40.
 
-The analysis is run as follows. The analysis can be run in parallel with 24 cpus, as the cluster number is varied from 3 to 8, and for each cluster number 5 repetitions are performed, each with random initialisation point. The best model fit of the
-repetitions is retained. If parallel=TRUE, verbose should be set of FALSE. The analysis takes x hours/mins with 24 cpus, memory X/cpu.
+The analysis is run as follows. The analysis can be run in parallel with 24 cpus, as the cluster number is varied from 1 to 8, and for each cluster number 10 repetitions are performed, each with random initialisation point. The best model fit of the repetitions is retained. The analysis takes 3days 7h, the total memory requirement was 33G.
 
 Visualisation of the data
-
-
-
-<center>
-<img src="figures/enhancers_10mods.png" >
-</center>
-
 
 ```
 bin_size=40
@@ -270,17 +295,123 @@ data="experiment_data/1000_enhancers_10modifications.RDS"
 Rscript scripts/plot_data_without_clusters.R  --data $data --bin.size $bin_size --bin.data TRUE --name "enhancers_10mods" --fig.width 2000 --fig.height 1000
 
 ```
-**TODO**
+<center>
+<img src="figures/enhancers_10mods.png" >
+</center>
 
 
 
 ```
-data="experiment_data/1000_enhancers_4modifications.Rds"
+data="experiment_data/1000_enhancers_10modifications.Rds"
 bin_size=40
 window=2000
 
-Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 10 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
 ```
+
+AIC and BIC values for varying number of clusters. 
+
+```
+fit="experiment_data/10mods_fit.RDS"
+name="enhancers-10mods"
+
+Rscript scripts/AICBIC.R  --fit $fit --name $name 
+
+```
+
+<center>
+<table width=80%>
+  <tr>
+    <td style="text-align:center">AIC</td>
+     <td style="text-align:center">BIC</td>
+     
+  </tr>
+  <tr>
+    <td><img src="figures/AIC-enhancers-10mods.png" ></td>
+    <td><img src="figures/BIC-enhancers-10mods.png" ></td>
+    
+  </tr>
+ </table>
+</center>
+
+AIC and BIC likely underestimate the number of clusters, large number of samples are required. Let us choose 6 for the number of clusters. Plot the negative log posterior as the function of EM iterations to check the convergence
+
+```
+fit="experiment_data/10mods_fit.RDS"
+name="enhancers-10mods"
+Rscript scripts/simulated_figures.R  --fit $fit --cluster 6 --skip 5 --fig.width 3000 --fig.height 12000 --name $name 
+
+```
+
+<center>
+<img src="figures/NLL-enhancers-10mods.png"  width="50%" >
+</center>
+
+Maybe the default value for EM iterations (250) is not enough for the convergence. One can increase it by `--EM.max.iter 1000` when running `scripts/run_ChromDMM.R`. The script `simulated_figures.R` also plots EM convergence diagnostics, see `figures/EM-diagnostics-enhancers-10mods.png`
+
+Realign the enhancers based on the inferred shift and flip states and visualise the clusters
+
+```
+data="experiment_data/1000_enhancers_10modifications.Rds"
+fit="experiment_data/10mods_fit.RDS"
+name="enhancers-10mods"
+bin_size=40
+Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --cluster 6 --name $name --fig.width 2500 --fig.height 5000
+
+```
+
+Run the analysis
+````
+Rscript scripts/run_ChromDMM.R  --data $data --cluster 1,2,3,4,5,6,7,8 --bin.size $bin_size --window $window --verbose FALSE --shift 21 --flip TRUE --seed.boolean FALSE --repetition 5 --parallel TRUE --output "data_experiments/10mods_fit.RDS"
+
+```
+<center>
+<table width=100% cellspacing=”10″ >
+  <tr>
+    <td style="text-align:center">Average aggregate patterns</td>
+     
+     
+  </tr>
+  <tr height = 20px>
+    <td></td>
+   
+    
+  </tr>
+  <tr>
+    <td style="text-align:center"><img src="figures/enhancers-10mods-average-6-clusters.png" width="100%"></td>
+ 
+    
+  </tr>
+ </table>
+</center>
+
+<center>
+<table width=100% cellspacing=”10″ >
+
+   </tr>
+  <tr height = 50px>
+    <td></td>
+   
+    
+  </tr>
+  <tr>
+     <td style="text-align:center">Smoothed Dirichlet parameters</td>
+     
+  </tr>
+  <tr height = 20px>
+    <td></td>
+   
+    
+  </tr>
+  <tr>
+   
+    <td style="text-align:center"><img src="figures/enhancers-10mods-DirichletParameters-6-clusters.png" width="100%" ></td>
+    
+  </tr>
+ </table>
+</center>
+
+
 
 ## Citation
 
