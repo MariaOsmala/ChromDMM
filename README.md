@@ -365,18 +365,12 @@ Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --clus
 <table width=100% cellspacing=”10″ >
   <tr>
     <td style="text-align:center">Average aggregate patterns</td>
-     
-     
   </tr>
   <tr height = 20px>
     <td></td>
-   
-    
   </tr>
   <tr>
     <td style="text-align:center"><img src="figures/enhancers-10mods-average-6-clusters.png" width="100%"></td>
- 
-    
   </tr>
  </table>
 </center>
@@ -384,25 +378,19 @@ Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --clus
 <center>
 <table width=100% cellspacing=”10″ >
 
-   </tr>
-  <tr height = 50px>
+  <tr height = 20px>
     <td></td>
-   
-    
   </tr>
   <tr>
      <td style="text-align:center">Smoothed Dirichlet parameters</td>
-     
   </tr>
+  
   <tr height = 20px>
     <td></td>
-   
-    
   </tr>
+  
   <tr>
-   
-    <td style="text-align:center"><img src="figures/enhancers-10mods-DirichletParameters-6-clusters.png" width="100%" ></td>
-    
+   <td style="text-align:center"><img src="figures/enhancers-10mods-DirichletParameters-6-clusters.png" width="100%"></td>
   </tr>
  </table>
 </center>
