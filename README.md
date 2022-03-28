@@ -399,7 +399,7 @@ Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --clus
 
 ## Citation
 
-Osmala, M., Eraslan, G. & Lähdesmäki, H. (2022). ChromDMM: A Dirichlet-Multinomial Mixture Model For Clustering Heterogeneous Epigenetic Data (submitted)
+Osmala, M., Eraslan, G. & Lähdesmäki, H. (2022). [ChromDMM: A Dirichlet-Multinomial Mixture Model For Clustering Heterogeneous Epigenetic Data](https://www.biorxiv.org/content/10.1101/2022.03.25.485838v1) (submitted)
 
 ## License
 
@@ -414,13 +414,13 @@ Department of Computer Science
 Email: firstname.surname@aalto.fi  
 Home Page: https://people.aalto.fi/maria.osmala
 
-Gökcen Eraslan, PhD
-Postdoctoral Researcher
-Broad Institute of MIT and Harvard
-Email: geraslan@broadinstitute.org
-Home Page: http://linkedin.com/in/gokcen
+Gökcen Eraslan, PhD    
+Postdoctoral Researcher 
+Broad Institute of MIT and Harvard  
+Email: geraslan@broadinstitite.org  
+Home page: http://linkedin.com/in/gokcen  
 
-Harri Lähdesmäki, D. Sc. (Tech)  
+Harri Lähdesmäki, prof.  
 Associate Professor  
 Aalto University School of Science  
 Department of Computer Science  
