@@ -2,6 +2,10 @@
 
 This R package contains ChromDMM, a Dirichlet-multinomial mixture model for clustering heterogeneous epigenetic data
 
+## Citation
+
+Maria Osmala, Gökçen Eraslan, Harri Lähdesmäki, ChromDMM: a Dirichlet-multinomial mixture model for clustering heterogeneous epigenetic data, Bioinformatics, 2022;, btac444, https://doi.org/10.1093/bioinformatics/btac444
+
 ## Installation
 
 You can install the ChromDMM R package using [devtools](https://devtools.r-lib.org):
@@ -397,9 +401,7 @@ Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --clus
 
 
 
-## Citation
 
-Maria Osmala, Gökçen Eraslan, Harri Lähdesmäki, ChromDMM: a Dirichlet-multinomial mixture model for clustering heterogeneous epigenetic data, Bioinformatics, 2022;, btac444, https://doi.org/10.1093/bioinformatics/btac444
 
 ## License
 
