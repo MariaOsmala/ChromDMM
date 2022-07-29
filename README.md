@@ -399,7 +399,7 @@ Rscript scripts/plot_data.R  --data $data --fit $fit --bin.size $bin_size --clus
 
 ## Citation
 
-Osmala, M., Eraslan, G. & Lähdesmäki, H. (2022). [ChromDMM: A Dirichlet-Multinomial Mixture Model For Clustering Heterogeneous Epigenetic Data](https://www.biorxiv.org/content/10.1101/2022.03.25.485838v1) (submitted)
+Maria Osmala, Gökçen Eraslan, Harri Lähdesmäki, ChromDMM: a Dirichlet-multinomial mixture model for clustering heterogeneous epigenetic data, Bioinformatics, 2022;, btac444, https://doi.org/10.1093/bioinformatics/btac444
 
 ## License
 
