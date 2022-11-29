@@ -23,7 +23,7 @@ option_list = list(
 
 opt = parse_args(OptionParser(option_list=option_list))
 
-source("scripts/plot.heatmap.final.R")
+#source("scripts/plot.heatmap.final.R")
 #opt=list()
 #opt$data=data
 #opt$name=name
