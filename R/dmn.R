@@ -97,7 +97,9 @@ dmn <-
         }
       }
       
-      ans <- DMN.cluster(count.data=count,
+      ans <- tryCatch(
+        # Try the clustering algorithm.
+        DMN.cluster(count.data=count,
                          K=k,
                          bin.width=bin.width,
                          S=S,
@@ -112,8 +114,31 @@ dmn <-
                          soft.kmeans.stiffness=soft.kmeans.stiffness,
                          randomInit=randomInit,
                          maxNumOptIter=maxNumOptIter,
-                         numOptRelTol=numOptRelTol, init=init, optim.options=optim.options, hessian=hessian)
-      print(ans$Mixture$Weight)
+                         numOptRelTol=numOptRelTol, init=init, optim.options=optim.options, hessian=hessian),
+        error=function(e){
+            # Clustering failed. Print the error below, but in order to
+            # to keep the other solutions, we construct a mock solution
+            # here and return it.
+            print("Error in DMN.cluster:")
+            print(e)
+            return(
+              data.frame(
+                 goodnessOfFit = Inf, # Will not be selected
+                 Mixture = data.frame(Weight = 0),
+                 Fit = 0,
+                 EM.diagnostics = 0,
+                 Data = 0,
+                 nll.data = 0,
+                 Ez = 0
+              )
+            )
+        },
+        warning=function(w){
+            print("warning in DMN.cluster:")
+            print(w)
+            # Assuming these will still return a correct result
+        }
+      )      
       o <- order(ans$Mixture$Weight, decreasing=TRUE)
       ans <- within(ans, {
           Group <- Group[,o, drop=FALSE]
@@ -124,7 +149,7 @@ dmn <-
           nll.data <- nll.data
           Ez <- Ez
       })
-      with(ans, .DMN(goodnessOfFit=GoodnessOfFit,
+      res = with(ans, .DMN(goodnessOfFit=GoodnessOfFit,
                      group=Group,
                      mixture=Mixture,
                      fit=Fit,
@@ -132,6 +157,7 @@ dmn <-
                      Data=Data,
                      nll.data=nll.data,
                      Ez=Ez))
+      res
     } #repet.func ends
 
     if (length(K) == 1) {

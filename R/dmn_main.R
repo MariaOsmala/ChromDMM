@@ -329,7 +329,7 @@ DMN.cluster <- function(count.data,
     stop('Number of shift states must be odd and at least 3')
 
   N <- nrow(count.data[[1]]) #number of samples
-  
+
   if(!is.null(zeta)){
     if(nrow(zeta)==1){
       zeta=matrix(rep( zeta,times=N), N, 2, byrow=TRUE) #N x 2
@@ -341,11 +341,10 @@ DMN.cluster <- function(count.data,
   if(!is.null(xi)){
     if(nrow(xi)==1){
       xi=matrix(rep( xi,times=N), N, S, byrow=TRUE) #N x S
-      #print(dim(xi))
     }
     
   }
-  
+ 
   M <- length(count.data)
 
   if (M < 1)
@@ -383,7 +382,7 @@ DMN.cluster <- function(count.data,
   inner.windows <- resize(inner.windows,
                           min(Wx)-((left.limit + right.limit)*bin.width), #2000 - (3+3)*40 =2000-240=1760
                           fix='center')
-
+  
   #initialize binned data and do row/col naming
   binned.data <- Map(function(data, ind){
     m <- matrix(0, N, width(inner.windows[[ind]])/bin.width) #N x (Wx/B=50)
@@ -391,7 +390,7 @@ DMN.cluster <- function(count.data,
     colnames(m) <- paste0('bin', seq_len(ncol(m)))
     m
   }, count.data, seq_len(M))
-
+  
   # add nonbinned data, windows, shifts and bin width as attributes
   # to the binned data
   attr(binned.data, 'nonbinned') <- count.data #N x window matrices
@@ -429,6 +428,7 @@ DMN.cluster <- function(count.data,
       kmeanspp.centers <- kmeanspp_initialize(as.matrix(kmeans.binned.data), K) #indices of the centers
       kmeanspp.centers <- kmeans.binned.data[kmeanspp.centers, , drop=F] #the actual centers, K x (M*S)
     }
+
     
     
     #rowNorm=F, the rows were already normalized
@@ -456,6 +456,7 @@ DMN.cluster <- function(count.data,
   
     #kmeans++ init
   }
+
   
   if(init=="random"){
     means.ind=sample.int(N, size=K, replace=TRUE)
@@ -478,7 +479,6 @@ DMN.cluster <- function(count.data,
   }
   
   if(shift.reads==TRUE && flip==TRUE){
-   
     result=dmn.em.shift.flip(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, S=S, xi=xi, zeta=zeta, alpha=alpha, 
                         M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                         maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
@@ -486,7 +486,6 @@ DMN.cluster <- function(count.data,
                         EM.maxit=EM.maxit, EM.threshold=EM.threshold,  optim.options=optim.options, hessian=hessian)
     
   }else if(shift.reads==TRUE && flip==FALSE){ #only shift
-  
       result=dmn.em.shift(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, S=S, xi=xi, alpha=alpha, 
                           M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                           maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
@@ -496,7 +495,6 @@ DMN.cluster <- function(count.data,
   
     
   }else if(shift.reads==FALSE && flip==TRUE){ #only flip
-    
     result=dmn.em.flip(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, zeta=zeta, alpha=alpha, 
                         M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                         maxNumOptIter=maxNumOptIter, binned.data=binned.data, 
@@ -505,8 +503,6 @@ DMN.cluster <- function(count.data,
     
     
   }else{ # shift.reads==FALSE && flip==FALSE
-    
-    
       result = dmn.em(kmeans.res=kmeans.res, Wx=Wx, bin.width=bin.width, alpha=alpha, M=M, K=K, Lx=Lx, N=N, verbose=verbose, 
                       maxNumOptIter=maxNumOptIter, binned.data=binned.data, eta=eta, nu=nu, etah=etah, nuh=nuh, numOptRelTol=numOptRelTol, 
                       EM.maxit=EM.maxit, EM.threshold=EM.threshold, optim.options=optim.options, hessian=hessian)
@@ -514,6 +510,5 @@ DMN.cluster <- function(count.data,
     
   }
 
-  
   return(result)
 }

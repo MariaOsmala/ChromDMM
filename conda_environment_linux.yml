@@ -12,6 +12,7 @@ dependencies:
   - gfortran
   - r-optparse
   - bioconductor-genomicranges
+  - bioconductor-iranges
   - r-egg
   - r-gridextra
   - r-cowplot
