@@ -1,4 +1,5 @@
 library("optparse")
+library("ChromDMM")
 
 # options
 option_list = list(
@@ -28,7 +29,7 @@ option_list = list(
 
 opt = parse_args(OptionParser(option_list=option_list))
 
-source("scripts/plot.heatmap.before.clustering.R")
+#source("scripts/plot.heatmap.before.clustering.R")
 #opt=list()
 #opt$data="experiment_data/data.RDS"
 #opt$data="experiment_data/1000_enhancers_4modifications.Rds"
